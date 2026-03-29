@@ -34,6 +34,18 @@
         #custom-menu { display: none; position: absolute; background: #fff; border: 1px solid #ccc; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); z-index: 1000; border-radius: 4px; padding: 5px 0; min-width: 190px; font-size: 14px; }
         #custom-menu div { padding: 10px 15px; cursor: pointer; }
         #custom-menu div:hover { background-color: #f0f0f0; }
+        /* CSS cho Custom Modal chuyên nghiệp */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+        .modal-box { background: #fff; padding: 25px 30px; border-radius: 12px; width: 400px; max-width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; animation: modalFadeIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .modal-box h3 { margin-top: 0; color: #2c3e50; font-size: 20px; margin-bottom: 12px; }
+        .modal-box p { color: #555; font-size: 15px; margin-bottom: 25px; line-height: 1.5; }
+        .modal-box input { width: 100%; padding: 10px 12px; margin-bottom: 25px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; outline: none; box-sizing: border-box; }
+        .modal-box input:focus { border-color: #4CAF50; box-shadow: 0 0 5px rgba(76, 175, 80, 0.4); }
+        .modal-actions { display: flex; justify-content: center; gap: 15px; }
+        .modal-actions button { min-width: 100px; padding: 10px 20px; font-size: 15px; border-radius: 6px; margin: 0; }
+        .btn-cancel { background-color: #e0e0e0; color: #333; }
+        .btn-cancel:hover { background-color: #d5d5d5; }
+        @keyframes modalFadeIn { from { opacity: 0; transform: translateY(-30px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
     </style>
 </head>
 <body>
@@ -126,9 +138,66 @@
         <div id="menu-clear-col">🗑️ Xóa dữ liệu cột này</div>
     </div>
 
+    <!-- HỘP THOẠI TÙY CHỈNH (CUSTOM MODAL) -->
+    <div id="custom-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="modal-title">Tiêu đề</h3>
+            <p id="modal-message">Nội dung</p>
+            <input type="text" id="modal-input" placeholder="Nhập văn bản...">
+            <div class="modal-actions">
+                <button id="modal-btn-cancel" class="btn btn-cancel">Hủy</button>
+                <button id="modal-btn-confirm" class="btn btn-primary">Đồng ý</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let rowCount = 1;
         let currentSessionId = null;
+
+        // ==========================================
+        // HỆ THỐNG MODAL GIAO DIỆN CHUYÊN NGHIỆP
+        // ==========================================
+        const CustomModal = {
+            show: function(type, message, callback) {
+                const overlay = document.getElementById('custom-modal');
+                const title = document.getElementById('modal-title');
+                const msg = document.getElementById('modal-message');
+                const input = document.getElementById('modal-input');
+                const btnCancel = document.getElementById('modal-btn-cancel');
+                const btnConfirm = document.getElementById('modal-btn-confirm');
+
+                msg.innerText = message;
+                input.value = '';
+                
+                if (type === 'alert') {
+                    title.innerText = 'Thông báo';
+                    input.style.display = 'none';
+                    btnCancel.style.display = 'none';
+                    btnConfirm.innerText = 'Đóng';
+                } else if (type === 'confirm') {
+                    title.innerText = 'Xác nhận';
+                    input.style.display = 'none';
+                    btnCancel.style.display = 'inline-block';
+                    btnConfirm.innerText = 'Đồng ý';
+                } else if (type === 'prompt') {
+                    title.innerText = 'Nhập thông tin';
+                    input.style.display = 'inline-block';
+                    btnCancel.style.display = 'inline-block';
+                    btnConfirm.innerText = 'Lưu lại';
+                    setTimeout(() => input.focus(), 100); // Tự động trỏ nháy chuột
+                }
+
+                overlay.style.display = 'flex';
+
+                btnConfirm.onclick = function() { overlay.style.display = 'none'; if (callback) callback(type === 'prompt' ? input.value : true); };
+                btnCancel.onclick = function() { overlay.style.display = 'none'; };
+                input.onkeydown = function(e) { if (e.key === 'Enter') btnConfirm.click(); };
+            },
+            alert: function(msg, cb) { this.show('alert', msg, cb); },
+            confirm: function(msg, cb) { this.show('confirm', msg, cb); },
+            prompt: function(msg, cb) { this.show('prompt', msg, cb); }
+        };
 
         // ==========================================
         //  CÁC HÀM QUẢN LÝ MÀN HÌNH HOME & PHIÊN
@@ -183,21 +252,19 @@
         }
 
         function createNewSession() {
-            const name = prompt("Nhập tên cho phiên làm việc (VD: Dữ liệu tháng 10):");
-            if (!name || name.trim() === "") return;
-            
-            const newSession = {
-                id: Date.now(),
-                name: name.trim(),
-                date: new Date().toLocaleString('vi-VN'),
-                data: [] // Dữ liệu bảng trống ban đầu
-            };
-            
-            const sessions = getSessions();
-            sessions.push(newSession);
-            saveSessionsData(sessions);
-            
-            openSession(newSession.id); // Tự động mở ngay sau khi tạo
+            CustomModal.prompt("Nhập tên cho phiên làm việc (VD: Dữ liệu tháng 10):", function(name) {
+                if (!name || name.trim() === "") return;
+                const newSession = {
+                    id: Date.now(),
+                    name: name.trim(),
+                    date: new Date().toLocaleString('vi-VN'),
+                    data: [] // Dữ liệu bảng trống ban đầu
+                };
+                const sessions = getSessions();
+                sessions.push(newSession);
+                saveSessionsData(sessions);
+                openSession(newSession.id); // Tự động mở ngay sau khi tạo
+            });
         }
 
         function openSession(id) {
@@ -222,12 +289,12 @@
         }
 
         function deleteSession(id) {
-            if (confirm('Bạn có chắc chắn muốn xóa vĩnh viễn phiên làm việc này?')) {
+            CustomModal.confirm('Bạn có chắc chắn muốn xóa vĩnh viễn phiên làm việc này?', function() {
                 let sessions = getSessions();
                 sessions = sessions.filter(s => s.id !== id);
                 saveSessionsData(sessions);
                 renderSessionList(); // Tải lại danh sách
-            }
+            });
         }
 
         // ==========================================
@@ -464,21 +531,21 @@
             if (!contextTargetRow) return;
             const tbody = document.getElementById('table-body');
             if (tbody.children.length <= 1) {
-                alert('Không thể xóa dòng duy nhất của bảng!');
+                CustomModal.alert('Không thể xóa dòng duy nhất của bảng!');
                 document.getElementById('custom-menu').style.display = 'none';
                 return;
             }
-            if (confirm('Bạn có chắc chắn muốn xóa dòng này?')) {
+            CustomModal.confirm('Bạn có chắc chắn muốn xóa dòng này?', function() {
                 tbody.removeChild(contextTargetRow);
                 updateRowNumbers();
-            }
+            });
             document.getElementById('custom-menu').style.display = 'none';
         });
 
         // Thực thi chức năng: Xóa dữ liệu cột
         document.getElementById('menu-clear-col').addEventListener('click', function() {
             if (contextColIdx === 0) return;
-            if (confirm('Bạn có chắc chắn muốn xóa sạch dữ liệu của cột này không?')) {
+            CustomModal.confirm('Bạn có chắc chắn muốn xóa sạch dữ liệu của cột này không?', function() {
                 const tbody = document.getElementById('table-body');
                 Array.from(tbody.children).forEach(row => {
                     const targetTd = row.children[contextColIdx];
@@ -486,7 +553,7 @@
                         targetTd.querySelector('input').value = ''; 
                     }
                 });
-            }
+            });
             document.getElementById('custom-menu').style.display = 'none';
         });
 
@@ -517,7 +584,7 @@
                 sessions[index].data = data;
                 sessions[index].date = new Date().toLocaleString('vi-VN');
                 saveSessionsData(sessions);
-                if (showAlert) alert('Đã lưu dữ liệu vào phiên thành công!');
+                if (showAlert) CustomModal.alert('Đã lưu dữ liệu vào phiên thành công!');
             }
         }
 
@@ -549,13 +616,13 @@
 
         // Nút xóa toàn bộ nội dung của bảng hiện tại
         function clearTable() {
-            if (confirm('Bạn có chắc chắn muốn xóa sạch dữ liệu trên bảng này?')) {
+            CustomModal.confirm('Bạn có chắc chắn muốn xóa sạch dữ liệu trên bảng này?', function() {
                 const tbody = document.getElementById('table-body');
                 tbody.innerHTML = '';
                 rowCount = 0;
                 addRow(); // Tạo lại 1 dòng mặc định trống
                 document.getElementById('results').style.display = 'none';
-            }
+            });
         }
 
         // Đăng ký sự kiện: Bắt buộc mở màn hình Home khi web vừa tải
