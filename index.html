@@ -168,13 +168,21 @@
                 <p style="font-size: 13px; color: #666; margin-top: -5px;">Tỉ lệ và mô hình các bộ số</p>
                 <div id="even-odd-result-list" style="max-height: 330px; overflow-y: auto; padding-right: 5px;"></div>
             </div>
-            <div class="result-box" style="text-align: center; display: flex; flex-direction: column; align-items: center;">
-                <h3 style="color: #fd7e14; align-self: flex-start;">Gợi Ý Bộ 6 Số</h3>
-                <p style="font-size: 13px; color: #666; align-self: flex-start; margin-top: -5px; margin-bottom: 20px;">Quay thử cho kỳ tiếp theo</p>
-                <button class="btn btn-primary" style="background-color: #fd7e14; font-size: 16px; padding: 10px 20px; width: 100%; border-radius: 8px;" onclick="suggestNumbers()">🎲 Quay Thử Ngẫu Nhiên</button>
-                <div id="suggested-numbers" style="margin-top: 30px; font-size: 18px; font-weight: bold;">
-                    <span style="color: #999; font-size: 14px; font-weight: normal;">Nhấn nút để lấy số</span>
+            <div class="result-box" style="display: flex; flex-direction: column;">
+                <h3 style="color: #fd7e14;">Bộ Số Gợi Ý Chuyên Sâu</h3>
+                <div style="margin-bottom: 15px;">
+                    <label for="suggestion-strategy" style="font-size: 14px; font-weight: bold; display: block; margin-bottom: 5px;">Chọn chiến lược:</label>
+                    <select id="suggestion-strategy" style="width: 100%; padding: 8px; font-size: 15px; border-radius: 4px;">
+                        <option value="balanced">Cân Bằng (Nóng, Lạnh, Tần Suất)</option>
+                        <option value="hot">Ưu Tiên Dây Nóng (5 kỳ gần nhất)</option>
+                        <option value="cold">Săn Số Gan (Lâu chưa về)</option>
+                        <option value="random">Hoàn Toàn Ngẫu Nhiên</option>
+                    </select>
                 </div>
+                <div id="suggested-numbers" style="flex-grow: 1; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; text-align: center;">
+                    <span style="color: #999; font-size: 14px; font-weight: normal;">Chọn chiến lược và nhấn nút</span>
+                </div>
+                <button class="btn btn-primary" style="background-color: #fd7e14; font-size: 16px; padding: 10px 20px; width: 100%; border-radius: 8px; margin-top: auto;" onclick="suggestNumbers()">✨ Tạo Bộ Số Vàng</button>
             </div>
         </div>
     </div>
@@ -773,16 +781,13 @@
         // ==========================================
         //  CÁC HÀM THỐNG KÊ NÂNG CAO & GỢI Ý
         // ==========================================
-        function calculateAdvancedStats() {
+
+        // Tách riêng hàm tính toán Số Gan
+        function getGanStats() {
             const rows = document.querySelectorAll('#table-body tr');
             const ganStats = {};
-            let totalEven = 0;
-            let totalOdd = 0;
-            const patternCount = {};
-            const recentTrends = [];
             let allMainNumbers = new Set();
 
-            // Tìm tất cả các số đã từng được nhập để theo dõi chu kỳ Gan
             rows.forEach((row) => {
                 row.querySelectorAll('.main-num').forEach(input => {
                     const val = input.value.trim();
@@ -790,10 +795,31 @@
                 });
             });
 
-            // Khởi tạo số gan mặc định (bằng tổng số kỳ quay)
+            if (allMainNumbers.size === 0) return {};
+
             allMainNumbers.forEach(num => { ganStats[num] = rows.length; });
 
             rows.forEach((row, index) => {
+                row.querySelectorAll('.main-num').forEach(input => {
+                    const value = input.value.trim();
+                    if (value !== "") {
+                        const num = parseInt(value, 10);
+                        if (ganStats[num] === rows.length) ganStats[num] = index;
+                    }
+                });
+            });
+            return ganStats;
+        }
+
+        // Tách riêng hàm tính toán Chẵn/Lẻ
+        function getEvenOddStats() {
+            const rows = document.querySelectorAll('#table-body tr');
+            let totalEven = 0;
+            let totalOdd = 0;
+            const patternCount = {};
+            const recentTrends = [];
+
+            rows.forEach((row) => {
                 let evenInRow = 0;
                 let oddInRow = 0;
                 let validMainCount = 0;
@@ -802,33 +828,32 @@
                     const value = input.value.trim();
                     if (value !== "") {
                         const num = parseInt(value, 10);
-                        
-                        // Cập nhật số Gan (Kỳ đầu tiên - vị trí index gần nhất xuất hiện)
-                        if (ganStats[num] === rows.length) ganStats[num] = index;
-
-                        // Đếm Chẵn Lẻ
                         if (num % 2 === 0) { totalEven++; evenInRow++; } 
                         else { totalOdd++; oddInRow++; }
                         validMainCount++;
                     }
                 });
 
-                // Ghi nhận mô hình Chẵn Lẻ của kỳ quay (ví dụ: 3 Chẵn - 2 Lẻ)
                 if (validMainCount > 0) {
                     const pattern = `${evenInRow} Chẵn - ${oddInRow} Lẻ`;
                     patternCount[pattern] = (patternCount[pattern] || 0) + 1;
-                    
-                    // Lưu lại nhịp rơi của 5 kỳ gần nhất (từ mới đến cũ)
                     if (recentTrends.length < 5) {
                         recentTrends.push({ even: evenInRow, odd: oddInRow });
                     }
                 }
             });
+            return { totalEven, totalOdd, patternCount, recentTrends };
+        }
 
+        // Hàm điều phối chính
+        function calculateAdvancedStats() {
+            const ganStats = getGanStats();
+            const eoStats = getEvenOddStats();
+            
             // 1. Hiển thị kết quả Số Gan
             const ganList = document.getElementById('gan-result-list');
             ganList.innerHTML = '';
-            const sortedGan = Object.entries(ganStats).sort((a, b) => b[1] - a[1]).slice(0, 20); // Lấy Top 20 số Gan nhất
+            const sortedGan = Object.entries(ganStats).sort((a, b) => b[1] - a[1]).slice(0, 20);
             if (sortedGan.length === 0) ganList.innerHTML = '<li>Chưa có dữ liệu</li>';
             sortedGan.forEach(([num, gan]) => {
                 if(gan > 0) ganList.innerHTML += `<li>Số <strong>${num}</strong>: chưa về <strong>${gan}</strong> kỳ liên tiếp</li>`;
@@ -837,14 +862,14 @@
 
             // 2. Hiển thị kết quả Chẵn/Lẻ Nâng Cao
             const eoList = document.getElementById('even-odd-result-list');
-            const totalNumbers = totalEven + totalOdd;
-            const evenPercent = totalNumbers > 0 ? Math.round(totalEven / totalNumbers * 100) : 0;
+            const totalNumbers = eoStats.totalEven + eoStats.totalOdd;
+            const evenPercent = totalNumbers > 0 ? Math.round(eoStats.totalEven / totalNumbers * 100) : 0;
             const oddPercent = totalNumbers > 0 ? 100 - evenPercent : 0;
             
             let eoHTML = `
                 <div style="display: flex; justify-content: space-between; font-size: 14px;">
-                    <span><strong>Tổng Chẵn:</strong> <span style="color: #0056b3;">${totalEven}</span></span>
-                    <span><strong>Tổng Lẻ:</strong> <span style="color: #d32f2f;">${totalOdd}</span></span>
+                    <span><strong>Tổng Chẵn:</strong> <span style="color: #0056b3;">${eoStats.totalEven}</span></span>
+                    <span><strong>Tổng Lẻ:</strong> <span style="color: #d32f2f;">${eoStats.totalOdd}</span></span>
                 </div>
                 <div class="progress-bar-wrap">
                     <div class="progress-even" style="width: ${evenPercent > 0 ? evenPercent : 50}%">${evenPercent > 0 ? evenPercent + '%' : ''}</div>
@@ -854,8 +879,8 @@
                 <ul style="margin: 0 0 15px 0; font-size: 13.5px;">
             `;
             
-            const totalDraws = Object.values(patternCount).reduce((a, b) => a + b, 0);
-            const sortedPatterns = Object.entries(patternCount).sort((a, b) => b[1] - a[1]);
+            const totalDraws = Object.values(eoStats.patternCount).reduce((a, b) => a + b, 0);
+            const sortedPatterns = Object.entries(eoStats.patternCount).sort((a, b) => b[1] - a[1]);
             sortedPatterns.forEach(([pattern, count]) => {
                 const prob = totalDraws > 0 ? ((count / totalDraws) * 100).toFixed(1) : 0;
                 eoHTML += `<li><strong>${pattern}</strong>: ${count} lần <span style="color: #888;">(${prob}%)</span></li>`;
@@ -867,10 +892,10 @@
                 <div>
             `;
 
-            if (recentTrends.length === 0) {
+            if (eoStats.recentTrends.length === 0) {
                 eoHTML += `<span style="font-size: 13px; color: #888;">Chưa có dữ liệu</span>`;
             } else {
-                recentTrends.forEach(t => {
+                eoStats.recentTrends.forEach(t => {
                     const tagClass = t.even > t.odd ? 'trend-even' : (t.even < t.odd ? 'trend-odd' : 'trend-neutral');
                     eoHTML += `<span class="trend-tag ${tagClass}">${t.even}C - ${t.odd}L</span>`;
                 });
@@ -880,20 +905,94 @@
             eoList.innerHTML = eoHTML;
         }
 
-        // 3. Hàm Gợi ý 6 số ngẫu nhiên cho kỳ tới
+        // 3. Hàm Gợi ý 6 số chuyên sâu
         function suggestNumbers() {
+            const strategy = document.getElementById('suggestion-strategy').value;
+            const rows = document.querySelectorAll('#table-body tr');
+            
+            // Bước 1: Thu thập tất cả các số liệu thống kê cần thiết
             const freqs = calculateFrequencies();
+            const ganStats = getGanStats();
+            
+            const hotNumbers = new Set();
+            rows.forEach((row, index) => {
+                if (index < 5) { // Lấy số nóng trong 5 kỳ gần nhất
+                    row.querySelectorAll('.main-num').forEach(input => {
+                        const val = input.value.trim();
+                        if (val !== "") hotNumbers.add(val);
+                    });
+                }
+            });
+
             let allMain = Object.keys(freqs.mainNumbers);
             let allSpecial = Object.keys(freqs.specialNumbers);
 
-            // Nếu bảng trống hoặc quá ít dữ liệu, tự động mồi bộ số từ 1-45 để vẫn chạy được
+            // Dự phòng nếu dữ liệu quá ít
             if (allMain.length < 15) { for(let i=1; i<=45; i++) allMain.push(i.toString()); }
             if (allSpecial.length < 5) { for(let i=1; i<=45; i++) allSpecial.push(i.toString()); }
 
-            allMain = [...new Set(allMain)];
-            allSpecial = [...new Set(allSpecial)];
+            // Bước 2: Xây dựng một "bể" số có trọng số dựa trên chiến lược
+            let mainPool = [];
+            if (strategy === 'random') {
+                mainPool = [...allMain];
+            } else {
+                const sortedFreqs = Object.entries(freqs.mainNumbers).sort((a, b) => b[1] - a[1]).map(item => item[0]);
+                const sortedGan = Object.entries(ganStats).sort((a, b) => b[1] - a[1]).map(item => item[0]);
 
-            // Thuật toán xáo trộn mảng để random chân thực
+                if (strategy === 'balanced') {
+                    mainPool.push(...allMain); // Trọng số cơ bản là 1
+                    mainPool.push(...[...hotNumbers].slice(0, 10), ...[...hotNumbers].slice(0, 10)); // Thêm 2 trọng số cho số Nóng
+                    mainPool.push(...sortedGan.slice(0, 10), ...sortedGan.slice(0, 10)); // Thêm 2 trọng số cho số Gan
+                    mainPool.push(...sortedFreqs.slice(0, 10), ...sortedFreqs.slice(0, 10)); // Thêm 2 trọng số cho số Tần suất cao
+                } else if (strategy === 'hot') {
+                    mainPool.push(...allMain);
+                    [...hotNumbers].forEach(num => { for(let i=0; i<5; i++) mainPool.push(num); }); // Ưu tiên mạnh cho số Nóng
+                } else if (strategy === 'cold') {
+                    mainPool.push(...allMain);
+                    sortedGan.slice(0, 15).forEach(num => { for(let i=0; i<5; i++) mainPool.push(num); }); // Ưu tiên mạnh cho số Gan
+                }
+            }
+            
+            // Bước 3: Tạo và sàng lọc bộ số
+            let suggestedMain;
+            let attempts = 0;
+            const MAX_ATTEMPTS = 500;
+
+            while (attempts < MAX_ATTEMPTS) {
+                shuffle(mainPool);
+                const tempSet = new Set(mainPool.slice(0, 15)); // Lấy 1 phần để tăng tốc độ chọn
+                if (tempSet.size < 5) continue;
+
+                const currentSuggestion = [...tempSet].slice(0, 5).map(n => parseInt(n));
+                
+                // Áp dụng bộ lọc thống kê (chỉ cho các chiến lược chuyên sâu)
+                if (strategy !== 'random') {
+                    const sum = currentSuggestion.reduce((a, b) => a + b, 0);
+                    const evens = currentSuggestion.filter(n => n % 2 === 0).length;
+
+                    // Lọc theo Tổng: Tổng các số thường nằm trong khoảng 80-160
+                    if (sum < 80 || sum > 160) {
+                        attempts++;
+                        continue;
+                    }
+                    // Lọc theo Chẵn/Lẻ: Ưu tiên các cấu trúc 2-3 hoặc 3-2
+                    if (evens < 2 || evens > 3) {
+                        attempts++;
+                        continue;
+                    }
+                }
+                
+                suggestedMain = currentSuggestion;
+                break; // Tìm thấy bộ số đạt chuẩn
+            }
+            
+            // Nếu sau nhiều lần vẫn không tìm được bộ số đạt chuẩn, lấy ngẫu nhiên để tránh treo
+            if (!suggestedMain) {
+                shuffle(allMain);
+                suggestedMain = allMain.slice(0, 5).map(n => parseInt(n));
+            }
+
+            // Bước 4: Chọn số đặc biệt và hiển thị kết quả
             function shuffle(array) {
                 for (let i = array.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
@@ -904,21 +1003,19 @@
 
             shuffle(allMain);
             shuffle(allSpecial);
-
-            // Bốc 5 số chính và sắp xếp thứ tự bé đến lớn
-            const suggestedMain = allMain.slice(0, 5).sort((a, b) => parseInt(a) - parseInt(b));
             const suggestedSpecial = allSpecial[0];
 
             const display = document.getElementById('suggested-numbers');
             let html = '<div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">';
             
             // In bóng 5 số chính (Màu Xanh)
+            suggestedMain.sort((a, b) => a - b);
             suggestedMain.forEach(num => {
-                html += `<span style="display: inline-block; width: 42px; height: 42px; line-height: 42px; background-color: #0056b3; color: white; border-radius: 50%; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">${num.padStart(2, '0')}</span>`;
+                html += `<span style="display: inline-block; width: 42px; height: 42px; line-height: 42px; background-color: #0056b3; color: white; border-radius: 50%; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">${num.toString().padStart(2, '0')}</span>`;
             });
             
             // In bóng 1 số Đặc biệt (Màu Đỏ)
-            html += `<span style="display: inline-block; width: 42px; height: 42px; line-height: 42px; background-color: #d32f2f; color: white; border-radius: 50%; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.2);" title="Số Đặc Biệt">${suggestedSpecial.padStart(2, '0')}</span>`;
+            html += `<span style="display: inline-block; width: 42px; height: 42px; line-height: 42px; background-color: #d32f2f; color: white; border-radius: 50%; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.2);" title="Số Đặc Biệt">${suggestedSpecial.toString().padStart(2, '0')}</span>`;
             html += '</div>';
             
             display.innerHTML = html;
