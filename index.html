@@ -122,30 +122,30 @@
         <div class="result-container" id="results" style="display: none;">
             <div class="result-box">
                 <h3 style="color: #0056b3;">Tần suất Số Chính</h3>
-                <ul id="main-result-list"></ul>
+                <!-- Giới hạn chiều cao tương đương ~12 dòng và thêm thanh cuộn -->
+                <ul id="main-result-list" style="max-height: 430px; overflow-y: auto; padding-right: 5px;"></ul>
             </div>
             <div class="result-box">
                 <h3 style="color: #d32f2f;">Tần suất Số Đặc Biệt</h3>
-                <ul id="special-result-list"></ul>
+                <!-- Giới hạn chiều cao tương đương ~12 dòng và thêm thanh cuộn -->
+                <ul id="special-result-list" style="max-height: 430px; overflow-y: auto; padding-right: 5px;"></ul>
             </div>
-        </div>
 
-        <!-- THỐNG KÊ BỘ SỐ -->
-        <div id="combination-stats-container" style="display: none; max-width: 980px; margin-top: 30px;">
-            <h3>Thống kê các bộ số đi cùng nhau</h3>
-            <p>Chọn loại bộ số và bấm tính toán để xem tần suất xuất hiện của chúng trong bộ 5 số chính.</p>
-            <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
-                <label for="combo-size" style="font-weight: bold;">Chọn bộ số:</label>
-                <select id="combo-size" style="padding: 8px; font-size: 15px; border-radius: 4px;">
-                    <option value="2">Bộ 2 số</option>
-                    <option value="3">Bộ 3 số</option>
-                    <option value="4">Bộ 4 số</option>
-                    <option value="5">Bộ 5 số</option>
-                </select>
-                <button class="btn btn-primary" onclick="processCombinations()">Thống kê bộ số</button>
-            </div>
-            <div id="combination-results-wrapper">
-                <!-- Bảng kết quả sẽ được chèn vào đây -->
+            <!-- THỐNG KÊ BỘ SỐ NẰM GỌN CÙNG HÀNG BÊN PHẢI -->
+            <div class="result-box" id="combination-stats-container" style="display: none; flex: 1.3;">
+                <h3 style="color: #28a745;">Bộ số đi cùng nhau</h3>
+                <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <select id="combo-size" style="padding: 6px; font-size: 14px; border-radius: 4px;">
+                        <option value="2">Bộ 2 số</option>
+                        <option value="3">Bộ 3 số</option>
+                        <option value="4">Bộ 4 số</option>
+                        <option value="5">Bộ 5 số</option>
+                    </select>
+                    <button class="btn btn-primary" style="padding: 6px 12px; margin-right: 0;" onclick="processCombinations()">Thống kê</button>
+                </div>
+                <div id="combination-results-wrapper">
+                    <!-- Bảng kết quả sẽ được chèn vào đây -->
+                </div>
             </div>
         </div>
     </div>
@@ -726,10 +726,11 @@
                 return;
             }
 
-            let tableHTML = `<div class="table-container" style="max-width: 500px;"><div class="header-wrapper" style="min-width: 460px;"><table class="lottery-table"><colgroup><col style="width: 70%;"><col style="width: 30%;"></colgroup><thead><tr><th>Bộ ${comboSize} số</th><th>Số lần xuất hiện</th></tr></thead></table></div><div class="body-wrapper" style="max-height: 400px; min-width: 460px;"><table class="lottery-table"><colgroup><col style="width: 70%;"><col style="width: 30%;"></colgroup><tbody>`;
+            // Tinh chỉnh lại bảng kết quả bộ số để vừa vặn khi đứng cạnh 2 cột danh sách
+            let tableHTML = `<div style="border: 1px solid #ccc; border-radius: 4px; overflow: hidden; max-width: 100%;"><div style="background: #f2f2f2; border-bottom: 1px solid #ccc;"><table class="lottery-table" style="width: 100%; margin: 0; border: none;"><thead><tr><th style="border-top: none; border-left: none; width: 65%;">Bộ ${comboSize} số</th><th style="border-top: none; border-right: none; width: 35%;">Số lần</th></tr></thead></table></div><div style="max-height: 345px; overflow-y: auto;"><table class="lottery-table" style="width: 100%; margin: 0; border: none;"><tbody>`;
 
             sortedData.forEach(([combo, count]) => {
-                tableHTML += `<tr><td><strong>${combo}</strong></td><td>${count}</td></tr>`;
+                tableHTML += `<tr><td style="border-left: none; width: 65%;"><strong>${combo}</strong></td><td style="border-right: none; width: 35%;">${count}</td></tr>`;
             });
 
             tableHTML += '</tbody></table></div></div>';
