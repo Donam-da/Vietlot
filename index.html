@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phần Mềm Thống Kê Xổ Số</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        table { border-collapse: collapse; margin-bottom: 20px; width: 100%; max-width: 800px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+        th.main-col { background-color: #e6f2ff; color: #0056b3; }
+        th.special-col { background-color: #ffe6e6; color: #d32f2f; }
+        input { width: 60px; text-align: center; padding: 6px; border: 1px solid #aaa; border-radius: 4px; }
+        .btn { padding: 10px 15px; margin-right: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold;}
+        .btn-primary { background-color: #4CAF50; color: white; }
+        .btn-primary:hover { background-color: #45a049; }
+        .btn-secondary { background-color: #008CBA; color: white; }
+        .btn-secondary:hover { background-color: #007399; }
+        .result-container { display: flex; gap: 20px; margin-top: 20px; max-width: 800px; }
+        .result-box { border: 1px solid #ddd; padding: 15px; border-radius: 5px; flex: 1; background: #f9f9f9; }
+        .result-box h3 { margin-top: 0; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+        ul { list-style-type: none; padding-left: 0; }
+        li { padding: 5px 0; border-bottom: 1px dashed #ccc; }
+    </style>
+</head>
+<body>
+
+    <h2>Phần Mềm Nhập Liệu & Thống Kê Xổ Số</h2>
+    <p>Nhập các bộ số vào bảng dưới đây. Hệ thống sẽ thống kê số lần xuất hiện của từng con số.</p>
+
+    <table id="lottery-table">
+        <thead>
+            <tr>
+                <th>Kỳ quay / STT</th>
+                <th class="main-col">Số chính 1</th>
+                <th class="main-col">Số chính 2</th>
+                <th class="main-col">Số chính 3</th>
+                <th class="main-col">Số chính 4</th>
+                <th class="main-col">Số chính 5</th>
+                <th class="special-col">Số Đặc Biệt</th>
+            </tr>
+        </thead>
+        <tbody id="table-body">
+            <tr>
+                <td>1</td>
+                <td><input type="number" class="main-num" min="0"></td>
+                <td><input type="number" class="main-num" min="0"></td>
+                <td><input type="number" class="main-num" min="0"></td>
+                <td><input type="number" class="main-num" min="0"></td>
+                <td><input type="number" class="main-num" min="0"></td>
+                <td><input type="number" class="special-num" min="0"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <button class="btn btn-secondary" onclick="addRow()">+ Thêm dòng</button>
+    <button class="btn btn-primary" onclick="processData()">Tính toán thống kê</button>
+
+    <div class="result-container" id="results" style="display: none;">
+        <div class="result-box">
+            <h3 style="color: #0056b3;">Tần suất Số Chính</h3>
+            <ul id="main-result-list"></ul>
+        </div>
+        <div class="result-box">
+            <h3 style="color: #d32f2f;">Tần suất Số Đặc Biệt</h3>
+            <ul id="special-result-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        let rowCount = 1;
+
+        // Hàm thêm dòng mới vào bảng
+        function addRow() {
+            rowCount++;
+            const tbody = document.getElementById('table-body');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${rowCount}</td>
+                <td><input type="number" class="main-num" min="0"></td>
+                <td><input type="number" class="main-num" min="0"></td>
+                <td><input type="number" class="main-num" min="0"></td>
+                <td><input type="number" class="main-num" min="0"></td>
+                <td><input type="number" class="main-num" min="0"></td>
+                <td><input type="number" class="special-num" min="0"></td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        // Hàm trọng tâm: Tính toán số lần xuất hiện phân biệt số chính và số đặc biệt
+        function calculateFrequencies() {
+            const frequencies = {
+                mainNumbers: {},
+                specialNumbers: {}
+            };
+
+            // Lấy tất cả các dòng dữ liệu trong bảng
+            const rows = document.querySelectorAll('#table-body tr');
+
+            rows.forEach(row => {
+                // 1. Thu thập và đếm 5 số chính
+                const mainInputs = row.querySelectorAll('.main-num');
+                mainInputs.forEach(input => {
+                    const value = input.value.trim();
+                    if (value !== "") {
+                        frequencies.mainNumbers[value] = (frequencies.mainNumbers[value] || 0) + 1;
+                    }
+                });
+
+                // 2. Thu thập và đếm 1 số đặc biệt
+                const specialInput = row.querySelector('.special-num');
+                if (specialInput) {
+                    const value = specialInput.value.trim();
+                    if (value !== "") {
+                        frequencies.specialNumbers[value] = (frequencies.specialNumbers[value] || 0) + 1;
+                    }
+                }
+            });
+
+            return frequencies;
+        }
+
+        // Hàm xử lý khi bấm nút "Tính toán thống kê"
+        function processData() {
+            const freqs = calculateFrequencies();
+            displayResults(freqs);
+        }
+
+        // Hàm hiển thị kết quả ra màn hình (sắp xếp giảm dần theo số lần xuất hiện)
+        function displayResults(freqs) {
+            document.getElementById('results').style.display = 'flex';
+            
+            const mainList = document.getElementById('main-result-list');
+            const specialList = document.getElementById('special-result-list');
+            
+            mainList.innerHTML = '';
+            specialList.innerHTML = '';
+
+            // Hàm helper để render danh sách thống kê
+            const renderList = (dataObj, targetElement) => {
+                const sortedData = Object.entries(dataObj).sort((a, b) => b[1] - a[1]); // Sắp xếp giảm dần
+                if (sortedData.length === 0) targetElement.innerHTML = '<li>Chưa có dữ liệu</li>';
+                sortedData.forEach(([num, count]) => {
+                    targetElement.innerHTML += `<li>Số <strong>${num}</strong>: xuất hiện <strong>${count}</strong> lần</li>`;
+                });
+            };
+
+            renderList(freqs.mainNumbers, mainList);
+            renderList(freqs.specialNumbers, specialList);
+        }
+    </script>
+</body>
+</html>
