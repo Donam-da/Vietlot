@@ -124,6 +124,7 @@
         <button class="btn btn-secondary" onclick="addRow()">+ Thêm dòng</button>
         <button class="btn btn-primary" onclick="processData()">Tính toán thống kê</button>
         <button class="btn btn-primary" style="background-color: #ff9800;" onclick="saveSession()">💾 Lưu phiên</button>
+        <button class="btn btn-primary" style="background-color: #17a2b8;" onclick="exportToExcel()">📥 Xuất Excel</button>
         <button class="btn btn-secondary" style="background-color: #f44336;" onclick="clearTable()">🗑 Xóa trắng bảng</button>
 
         <div class="result-container" id="results" style="display: none;">
@@ -688,6 +689,43 @@
                 addRow(); // Tạo lại 1 dòng mặc định trống
                 document.getElementById('results').style.display = 'none';
             });
+        }
+
+        // Nút xuất dữ liệu bảng ra file CSV (Mở bằng Excel, tối ưu hóa để chia cột)
+        function exportToExcel() {
+            const rows = document.querySelectorAll('#table-body tr');
+            if (rows.length === 0) {
+                CustomModal.alert('Không có dữ liệu để xuất!');
+                return;
+            }
+
+            let csvContent = '\uFEFF'; // Thêm BOM để Excel nhận diện chuẩn tiếng Việt UTF-8
+            // Sử dụng dấu chấm phẩy (;) làm ký tự phân tách để Excel tự động chia cột chính xác
+            const headers = ['Kỳ quay / STT', 'Thời gian', 'Số chính 1', 'Số chính 2', 'Số chính 3', 'Số chính 4', 'Số chính 5', 'Số Đặc Biệt'];
+            csvContent += headers.join(';') + '\n';
+
+            rows.forEach(row => {
+                const stt = row.children[0].innerText.trim();
+                const date = row.querySelector('.draw-date') ? row.querySelector('.draw-date').value.trim() : '';
+                const mainInputs = Array.from(row.querySelectorAll('.main-num')).map(input => input.value.trim());
+                const specialInput = row.querySelector('.special-num') ? row.querySelector('.special-num').value.trim() : '';
+
+                const rowData = [stt, date, ...mainInputs, specialInput];
+                csvContent += rowData.map(val => `"${val.replace(/"/g, '""')}"`).join(';') + '\n'; // Bọc trong "" và escape dấu " nếu có
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            let sessionName = document.getElementById('session-title').innerText.replace('Phiên làm việc:', '').trim();
+            if (sessionName === "Phần Mềm Nhập Liệu & Thống Kê") sessionName = "Hien_Tai";
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Du_Lieu_Xo_So_${sessionName.replace(/\s+/g, '_')}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // Đăng ký sự kiện: Bắt buộc mở màn hình Home khi web vừa tải
