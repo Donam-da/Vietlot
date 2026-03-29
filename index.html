@@ -1058,13 +1058,18 @@
             const ganStats = getGanStats();
             
             const hotNumbers = new Set();
+            const historicalSets = []; // Lưu trữ các bộ số quá khứ để lọc trùng
+
             rows.forEach((row, index) => {
-                if (index < 5) { // Lấy số nóng trong 5 kỳ gần nhất
-                    row.querySelectorAll('.main-num').forEach(input => {
-                        const val = input.value.trim();
-                        if (val !== "") hotNumbers.add(val);
-                    });
-                }
+                const numsInRow = [];
+                row.querySelectorAll('.main-num').forEach(input => {
+                    const val = input.value.trim();
+                    if (val !== "") {
+                        if (index < 5) hotNumbers.add(val);
+                        numsInRow.push(parseInt(val, 10));
+                    }
+                });
+                if (numsInRow.length === 5) historicalSets.push(numsInRow);
             });
 
             let allMain = Object.keys(freqs.mainNumbers);
@@ -1116,13 +1121,52 @@
                     const sum = currentSuggestion.reduce((a, b) => a + b, 0);
                     const evens = currentSuggestion.filter(n => n % 2 === 0).length;
 
-                    // Lọc theo Tổng: Tổng các số thường nằm trong khoảng 80-160
+                    // 1. Lọc theo Tổng: Tổng các số thường nằm trong khoảng 80-160
                     if (sum < 80 || sum > 160) {
                         attempts++;
                         continue;
                     }
-                    // Lọc theo Chẵn/Lẻ: Ưu tiên các cấu trúc 2-3 hoặc 3-2
+                    // 2. Lọc theo Chẵn/Lẻ: Ưu tiên các cấu trúc 2-3 hoặc 3-2
                     if (evens < 2 || evens > 3) {
+                        attempts++;
+                        continue;
+                    }
+                    
+                    // 3. Lọc Phân bổ Đầu số: Tránh trường hợp 4-5 số dồn vào cùng 1 đầu (vd: 11,12,15,18,19)
+                    const decades = [0, 0, 0, 0, 0];
+                    currentSuggestion.forEach(n => { decades[Math.floor(n / 10)]++; });
+                    if (Math.max(...decades) > 3) {
+                        attempts++;
+                        continue;
+                    }
+
+                    // 4. Lọc Dây liên tiếp: Xóa bỏ các bộ có 3 số liên tiếp trở lên (rất hiếm khi xảy ra)
+                    currentSuggestion.sort((a, b) => a - b);
+                    let maxConsecutive = 1;
+                    let currentConsecutive = 1;
+                    for (let i = 1; i < currentSuggestion.length; i++) {
+                        if (currentSuggestion[i] === currentSuggestion[i-1] + 1) {
+                            currentConsecutive++;
+                            maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
+                        } else {
+                            currentConsecutive = 1;
+                        }
+                    }
+                    if (maxConsecutive >= 3) {
+                        attempts++;
+                        continue;
+                    }
+
+                    // 5. Lọc Lịch sử: Loại bỏ các bộ số trùng từ 4 số trở lên so với bất kỳ kết quả nào trong quá khứ
+                    let isDuplicatePast = false;
+                    for (let past of historicalSets) {
+                        let matchCount = currentSuggestion.filter(n => past.includes(n)).length;
+                        if (matchCount >= 4) {
+                            isDuplicatePast = true;
+                            break;
+                        }
+                    }
+                    if (isDuplicatePast) {
                         attempts++;
                         continue;
                     }
@@ -1237,27 +1281,66 @@
             shuffle(specialPool);
             
             // Chọn ngẫu nhiên 5 số chính ĐỘC NHẤT từ "bể" số đã trộn
-            const pickedMain = [];
-            const pickedSet = new Set();
-            for (const num of mainPool) {
-                if (!pickedSet.has(num)) {
-                    pickedSet.add(num);
-                    pickedMain.push(num);
-                }
-                if (pickedMain.length === 5) break;
-            }
+            // Áp dụng thuật toán chuyên nghiệp để đảm bảo bộ số ngẫu nhiên cuối cùng vẫn đạt chuẩn
+            let pickedMain = [];
+            let attempts = 0;
+            const MAX_ATTEMPTS = 500;
+            
+            const rows = document.querySelectorAll('#table-body tr');
+            const historicalSets = [];
+            rows.forEach(row => {
+                const numsInRow = [];
+                row.querySelectorAll('.main-num').forEach(input => {
+                    const val = input.value.trim();
+                    if (val !== "") numsInRow.push(parseInt(val, 10));
+                });
+                if (numsInRow.length === 5) historicalSets.push(numsInRow);
+            });
 
-            // Nếu sau khi duyệt hết bể mà vẫn không đủ 5 số (trường hợp hiếm), bổ sung ngẫu nhiên
-            if (pickedMain.length < 5) {
-                const allPossibleNumbers = Array.from({length: 45}, (_, i) => i + 1);
-                shuffle(allPossibleNumbers);
-                for (const num of allPossibleNumbers) {
+            while (attempts < MAX_ATTEMPTS) {
+                shuffle(mainPool);
+                const currentPicked = [];
+                const pickedSet = new Set();
+                
+                for (const num of mainPool) {
                     if (!pickedSet.has(num)) {
                         pickedSet.add(num);
-                        pickedMain.push(num);
+                        currentPicked.push(num);
                     }
-                    if (pickedMain.length === 5) break;
+                    if (currentPicked.length === 5) break;
                 }
+
+                if (currentPicked.length < 5) {
+                    const allPossibleNumbers = Array.from({length: 45}, (_, i) => i + 1);
+                    shuffle(allPossibleNumbers);
+                    for (const num of allPossibleNumbers) {
+                        if (!pickedSet.has(num)) { pickedSet.add(num); currentPicked.push(num); }
+                        if (currentPicked.length === 5) break;
+                    }
+                }
+
+                // Lọc chuẩn (nới lỏng hơn 1 chút để luôn có kết quả, nhưng vẫn loại bỏ các bộ quá dị)
+                const sum = currentPicked.reduce((a, b) => a + b, 0);
+                const evens = currentPicked.filter(n => n % 2 === 0).length;
+                currentPicked.sort((a, b) => a - b);
+                
+                let maxConsecutive = 1, currentConsecutive = 1;
+                for (let i = 1; i < currentPicked.length; i++) {
+                    if (currentPicked[i] === currentPicked[i-1] + 1) {
+                        maxConsecutive = Math.max(maxConsecutive, ++currentConsecutive);
+                    } else currentConsecutive = 1;
+                }
+
+                let isDuplicatePast = false;
+                for (let past of historicalSets) {
+                    if (currentPicked.filter(n => past.includes(n)).length >= 4) { isDuplicatePast = true; break; }
+                }
+
+                pickedMain = currentPicked; // Gán trước đề phòng hết attempts
+                if (sum >= 70 && sum <= 170 && evens >= 1 && evens <= 4 && maxConsecutive < 4 && !isDuplicatePast) {
+                    break; // Đạt chuẩn thì thoát vòng lặp
+                }
+                attempts++;
             }
             
             const pickedSpecial = specialPool[0];
