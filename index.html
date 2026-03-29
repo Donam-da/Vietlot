@@ -25,53 +25,165 @@
 </head>
 <body>
 
-    <h2>Phần Mềm Nhập Liệu & Thống Kê Xổ Số</h2>
-    <p>Nhập các bộ số vào bảng dưới đây. Hệ thống sẽ thống kê số lần xuất hiện của từng con số.</p>
-    <p style="color: #555; font-style: italic;">💡 Mẹo: Bạn có thể copy một hoặc nhiều cột từ Excel và dán (Ctrl + V) trực tiếp vào bất kỳ ô nhập liệu nào.</p>
+    <!-- MÀN HÌNH HOME QUẢN LÝ PHIÊN -->
+    <div id="home-screen">
+        <h2>🏠 Quản lý phiên làm việc</h2>
+        <p>Chọn một phiên làm việc cũ để tiếp tục hoặc tạo một phiên mới tinh.</p>
+        <button class="btn btn-primary" onclick="createNewSession()">+ Tạo phiên mới</button>
+        <div id="session-list" style="margin-top: 20px; max-width: 800px;"></div>
+    </div>
 
-    <table id="lottery-table">
-        <thead>
-            <tr>
-                <th>Kỳ quay / STT</th>
-                <th class="main-col">Số chính 1</th>
-                <th class="main-col">Số chính 2</th>
-                <th class="main-col">Số chính 3</th>
-                <th class="main-col">Số chính 4</th>
-                <th class="main-col">Số chính 5</th>
-                <th class="special-col">Số Đặc Biệt</th>
-            </tr>
-        </thead>
-        <tbody id="table-body">
-            <tr>
-                <td>1</td>
-                <td><input type="number" class="main-num" min="0"></td>
-                <td><input type="number" class="main-num" min="0"></td>
-                <td><input type="number" class="main-num" min="0"></td>
-                <td><input type="number" class="main-num" min="0"></td>
-                <td><input type="number" class="main-num" min="0"></td>
-                <td><input type="number" class="special-num" min="0"></td>
-            </tr>
-        </tbody>
-    </table>
-
-    <button class="btn btn-secondary" onclick="addRow()">+ Thêm dòng</button>
-    <button class="btn btn-primary" onclick="processData()">Tính toán thống kê</button>
-    <button class="btn btn-primary" style="background-color: #ff9800;" onclick="saveSession()">💾 Lưu phiên</button>
-    <button class="btn btn-secondary" style="background-color: #f44336;" onclick="clearSession()">🗑 Xóa dữ liệu</button>
-
-    <div class="result-container" id="results" style="display: none;">
-        <div class="result-box">
-            <h3 style="color: #0056b3;">Tần suất Số Chính</h3>
-            <ul id="main-result-list"></ul>
+    <!-- MÀN HÌNH BẢNG NHẬP LIỆU -->
+    <div id="app-screen" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; max-width: 800px;">
+            <h2 id="session-title">Phần Mềm Nhập Liệu & Thống Kê</h2>
+            <button class="btn" style="background-color: #6c757d; color: white;" onclick="goHome()">🏠 Quay lại Home</button>
         </div>
-        <div class="result-box">
-            <h3 style="color: #d32f2f;">Tần suất Số Đặc Biệt</h3>
-            <ul id="special-result-list"></ul>
+        
+        <p>Nhập các bộ số vào bảng dưới đây. Hệ thống sẽ thống kê số lần xuất hiện của từng con số.</p>
+        <p style="color: #555; font-style: italic;">💡 Mẹo: Bạn có thể copy một hoặc nhiều cột từ Excel và dán (Ctrl + V) trực tiếp vào bất kỳ ô nhập liệu nào.</p>
+
+        <table id="lottery-table">
+            <thead>
+                <tr>
+                    <th>Kỳ quay / STT</th>
+                    <th class="main-col">Số chính 1</th>
+                    <th class="main-col">Số chính 2</th>
+                    <th class="main-col">Số chính 3</th>
+                    <th class="main-col">Số chính 4</th>
+                    <th class="main-col">Số chính 5</th>
+                    <th class="special-col">Số Đặc Biệt</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Dữ liệu sẽ được tự động sinh ra khi load phiên -->
+            </tbody>
+        </table>
+
+        <button class="btn btn-secondary" onclick="addRow()">+ Thêm dòng</button>
+        <button class="btn btn-primary" onclick="processData()">Tính toán thống kê</button>
+        <button class="btn btn-primary" style="background-color: #ff9800;" onclick="saveSession()">💾 Lưu phiên</button>
+        <button class="btn btn-secondary" style="background-color: #f44336;" onclick="clearTable()">🗑 Xóa trắng bảng</button>
+
+        <div class="result-container" id="results" style="display: none;">
+            <div class="result-box">
+                <h3 style="color: #0056b3;">Tần suất Số Chính</h3>
+                <ul id="main-result-list"></ul>
+            </div>
+            <div class="result-box">
+                <h3 style="color: #d32f2f;">Tần suất Số Đặc Biệt</h3>
+                <ul id="special-result-list"></ul>
+            </div>
         </div>
     </div>
 
     <script>
         let rowCount = 1;
+        let currentSessionId = null;
+
+        // ==========================================
+        //  CÁC HÀM QUẢN LÝ MÀN HÌNH HOME & PHIÊN
+        // ==========================================
+        function getSessions() {
+            return JSON.parse(localStorage.getItem('lotterySessions')) || [];
+        }
+
+        function saveSessionsData(sessions) {
+            localStorage.setItem('lotterySessions', JSON.stringify(sessions));
+        }
+
+        function showHomeScreen() {
+            document.getElementById('app-screen').style.display = 'none';
+            document.getElementById('home-screen').style.display = 'block';
+            renderSessionList();
+        }
+
+        function renderSessionList() {
+            const sessions = getSessions();
+            const listDiv = document.getElementById('session-list');
+            listDiv.innerHTML = '';
+            
+            if (sessions.length === 0) {
+                listDiv.innerHTML = '<p style="color: #777;">Chưa có phiên làm việc nào. Hãy tạo phiên mới!</p>';
+                return;
+            }
+
+            sessions.forEach(session => {
+                const item = document.createElement('div');
+                item.style.border = '1px solid #ddd';
+                item.style.padding = '15px';
+                item.style.marginBottom = '10px';
+                item.style.borderRadius = '5px';
+                item.style.display = 'flex';
+                item.style.justifyContent = 'space-between';
+                item.style.alignItems = 'center';
+                item.style.backgroundColor = '#f9f9f9';
+
+                item.innerHTML = `
+                    <div>
+                        <strong style="font-size: 1.1em; color: #0056b3;">${session.name}</strong> <br> 
+                        <small style="color: #666;">Cập nhật lần cuối: ${session.date}</small>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" style="padding: 8px 15px; margin-right: 5px;" onclick="openSession(${session.id})">Mở phiên</button>
+                        <button class="btn btn-secondary" style="background-color: #f44336; padding: 8px 15px; margin: 0;" onclick="deleteSession(${session.id})">Xóa</button>
+                    </div>
+                `;
+                listDiv.appendChild(item);
+            });
+        }
+
+        function createNewSession() {
+            const name = prompt("Nhập tên cho phiên làm việc (VD: Dữ liệu tháng 10):");
+            if (!name || name.trim() === "") return;
+            
+            const newSession = {
+                id: Date.now(),
+                name: name.trim(),
+                date: new Date().toLocaleString('vi-VN'),
+                data: [] // Dữ liệu bảng trống ban đầu
+            };
+            
+            const sessions = getSessions();
+            sessions.push(newSession);
+            saveSessionsData(sessions);
+            
+            openSession(newSession.id); // Tự động mở ngay sau khi tạo
+        }
+
+        function openSession(id) {
+            currentSessionId = id;
+            const sessions = getSessions();
+            const session = sessions.find(s => s.id === id);
+            if (!session) return;
+            
+            document.getElementById('home-screen').style.display = 'none';
+            document.getElementById('app-screen').style.display = 'block';
+            document.getElementById('session-title').innerText = "Phiên làm việc: " + session.name;
+            
+            loadTableData(session.data);
+            document.getElementById('results').style.display = 'none';
+        }
+
+        function goHome() {
+            if (currentSessionId) {
+                saveSession(false); // Ngầm tự lưu dữ liệu khi bấm quay ra Trang Chủ
+            }
+            showHomeScreen();
+        }
+
+        function deleteSession(id) {
+            if (confirm('Bạn có chắc chắn muốn xóa vĩnh viễn phiên làm việc này?')) {
+                let sessions = getSessions();
+                sessions = sessions.filter(s => s.id !== id);
+                saveSessionsData(sessions);
+                renderSessionList(); // Tải lại danh sách
+            }
+        }
+
+        // ==========================================
+        //  CÁC HÀM XỬ LÝ TRONG BẢNG (APP SCREEN)
+        // ==========================================
 
         // Hàm thêm dòng mới vào bảng
         function addRow() {
@@ -190,8 +302,9 @@
             });
         });
 
-        // Hàm lưu phiên làm việc vào LocalStorage
-        function saveSession() {
+        // Hàm lưu dữ liệu hiện tại đè vào phiên làm việc đang mở
+        function saveSession(showAlert = true) {
+            if (!currentSessionId) return;
             const rows = document.querySelectorAll('#table-body tr');
             const data = [];
             rows.forEach(row => {
@@ -199,37 +312,44 @@
                 const specialInput = row.querySelector('.special-num') ? row.querySelector('.special-num').value : '';
                 data.push({ main: mainInputs, special: specialInput });
             });
-            localStorage.setItem('lotterySession', JSON.stringify(data));
-            alert('Đã lưu phiên làm việc thành công!');
-        }
-
-        // Hàm tải lại phiên làm việc từ LocalStorage (tự động chạy lúc mở trang)
-        function loadSession() {
-            const savedData = localStorage.getItem('lotterySession');
-            if (savedData) {
-                const data = JSON.parse(savedData);
-                const tbody = document.getElementById('table-body');
-                tbody.innerHTML = ''; // Xóa dòng trống mặc định
-                rowCount = 0; // Reset bộ đếm số dòng
-                
-                data.forEach(rowData => {
-                    addRow(); // Tái tạo số lượng dòng tương ứng
-                    const lastRow = tbody.lastElementChild;
-                    const mainInputs = lastRow.querySelectorAll('.main-num');
-                    const specialInput = lastRow.querySelector('.special-num');
-                    
-                    rowData.main.forEach((val, idx) => {
-                        if (mainInputs[idx]) mainInputs[idx].value = val;
-                    });
-                    if (specialInput) specialInput.value = rowData.special;
-                });
+            
+            const sessions = getSessions();
+            const index = sessions.findIndex(s => s.id === currentSessionId);
+            if (index !== -1) {
+                sessions[index].data = data;
+                sessions[index].date = new Date().toLocaleString('vi-VN');
+                saveSessionsData(sessions);
+                if (showAlert) alert('Đã lưu dữ liệu vào phiên thành công!');
             }
         }
 
-        // Hàm xóa toàn bộ dữ liệu (cả bảng lẫn dữ liệu đã lưu)
-        function clearSession() {
-            if (confirm('Bạn có chắc chắn muốn xóa toàn bộ dữ liệu hiện tại?')) {
-                localStorage.removeItem('lotterySession');
+        // Hàm phục hồi dữ liệu từ 1 phiên vào bảng
+        function loadTableData(data) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            rowCount = 0;
+            
+            if (!data || data.length === 0) {
+                addRow(); // Tạo 1 dòng rỗng nếu chưa có gì
+                return;
+            }
+            
+            data.forEach(rowData => {
+                addRow();
+                const lastRow = tbody.lastElementChild;
+                const mainInputs = lastRow.querySelectorAll('.main-num');
+                const specialInput = lastRow.querySelector('.special-num');
+                
+                rowData.main.forEach((val, idx) => {
+                    if (mainInputs[idx]) mainInputs[idx].value = val;
+                });
+                if (specialInput) specialInput.value = rowData.special;
+            });
+        }
+
+        // Nút xóa toàn bộ nội dung của bảng hiện tại
+        function clearTable() {
+            if (confirm('Bạn có chắc chắn muốn xóa sạch dữ liệu trên bảng này?')) {
                 const tbody = document.getElementById('table-body');
                 tbody.innerHTML = '';
                 rowCount = 0;
@@ -238,8 +358,8 @@
             }
         }
 
-        // Đăng ký sự kiện: Tự động tải dữ liệu khi trang web vừa tải xong
-        window.addEventListener('DOMContentLoaded', loadSession);
+        // Đăng ký sự kiện: Bắt buộc mở màn hình Home khi web vừa tải
+        window.addEventListener('DOMContentLoaded', showHomeScreen);
     </script>
 </body>
 </html>
