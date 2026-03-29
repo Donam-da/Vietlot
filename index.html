@@ -329,6 +329,32 @@
             });
         });
 
+        // Xử lý sự kiện click chuột phải (contextmenu) để xóa dữ liệu 1 cột
+        document.getElementById('lottery-table').addEventListener('contextmenu', function(e) {
+            // Lấy phần tử ô (th hoặc td) đang được click chuột phải
+            const targetCell = e.target.closest('th') || e.target.closest('td');
+            if (!targetCell) return;
+
+            e.preventDefault(); // Ngăn chặn menu chuột phải mặc định của trình duyệt
+            
+            // Xác định vị trí (index) của cột
+            const tr = targetCell.closest('tr');
+            const colIdx = Array.from(tr.children).indexOf(targetCell);
+
+            // Bỏ qua cột đầu tiên (Cột STT không có dữ liệu nhập)
+            if (colIdx === 0) return;
+
+            if (confirm('Bạn có chắc chắn muốn xóa sạch dữ liệu của cột này không?')) {
+                const tbody = document.getElementById('table-body');
+                Array.from(tbody.children).forEach(row => {
+                    const targetTd = row.children[colIdx];
+                    if (targetTd && targetTd.querySelector('input')) {
+                        targetTd.querySelector('input').value = ''; // Xóa trắng ô nhập liệu
+                    }
+                });
+            }
+        });
+
         // Hàm lưu dữ liệu hiện tại đè vào phiên làm việc đang mở
         function saveSession(showAlert = true) {
             if (!currentSessionId) return;
