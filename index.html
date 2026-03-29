@@ -46,6 +46,13 @@
         .btn-cancel { background-color: #e0e0e0; color: #333; }
         .btn-cancel:hover { background-color: #d5d5d5; }
         @keyframes modalFadeIn { from { opacity: 0; transform: translateY(-30px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        /* CSS cho Phân Tích Chẵn Lẻ Nâng Cao */
+        .progress-bar-wrap { width: 100%; background-color: #e9ecef; border-radius: 6px; height: 22px; display: flex; overflow: hidden; margin: 8px 0 15px 0; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); }
+        .progress-even { background-color: #0056b3; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; transition: width 0.5s; }
+        .progress-odd { background-color: #d32f2f; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; transition: width 0.5s; }
+        .trend-tag { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 5px; margin-bottom: 5px; }
+        .trend-even { background-color: #e6f2ff; color: #0056b3; border: 1px solid #b3d7ff; }
+        .trend-odd { background-color: #ffe6e6; color: #d32f2f; border: 1px solid #ffb3b3; }
     </style>
 </head>
 <body>
@@ -154,12 +161,12 @@
             <div class="result-box">
                 <h3 style="color: #6f42c1;">Thống Kê Số Gan</h3>
                 <p style="font-size: 13px; color: #666; margin-top: -5px;">Các số lâu chưa xuất hiện nhất</p>
-                <ul id="gan-result-list" style="max-height: 230px; overflow-y: auto; padding-right: 5px;"></ul>
+                <ul id="gan-result-list" style="max-height: 330px; overflow-y: auto; padding-right: 5px;"></ul>
             </div>
             <div class="result-box">
                 <h3 style="color: #17a2b8;">Phân Tích Chẵn / Lẻ</h3>
                 <p style="font-size: 13px; color: #666; margin-top: -5px;">Tỉ lệ và mô hình các bộ số</p>
-                <ul id="even-odd-result-list" style="max-height: 230px; overflow-y: auto; padding-right: 5px;"></ul>
+                <div id="even-odd-result-list" style="max-height: 330px; overflow-y: auto; padding-right: 5px;"></div>
             </div>
             <div class="result-box" style="text-align: center; display: flex; flex-direction: column; align-items: center;">
                 <h3 style="color: #fd7e14; align-self: flex-start;">Gợi Ý Bộ 6 Số</h3>
@@ -772,6 +779,7 @@
             let totalEven = 0;
             let totalOdd = 0;
             const patternCount = {};
+            const recentTrends = [];
             let allMainNumbers = new Set();
 
             // Tìm tất cả các số đã từng được nhập để theo dõi chu kỳ Gan
@@ -809,6 +817,11 @@
                 if (validMainCount > 0) {
                     const pattern = `${evenInRow} Chẵn - ${oddInRow} Lẻ`;
                     patternCount[pattern] = (patternCount[pattern] || 0) + 1;
+                    
+                    // Lưu lại nhịp rơi của 5 kỳ gần nhất (từ mới đến cũ)
+                    if (recentTrends.length < 5) {
+                        recentTrends.push({ even: evenInRow, odd: oddInRow });
+                    }
                 }
             });
 
@@ -822,21 +835,49 @@
             });
             if (ganList.innerHTML === '') ganList.innerHTML = '<li style="color: #28a745;">Không có số gan (tất cả đều vừa về)</li>';
 
-            // 2. Hiển thị kết quả Chẵn/Lẻ
+            // 2. Hiển thị kết quả Chẵn/Lẻ Nâng Cao
             const eoList = document.getElementById('even-odd-result-list');
             const totalNumbers = totalEven + totalOdd;
             const evenPercent = totalNumbers > 0 ? Math.round(totalEven / totalNumbers * 100) : 0;
             const oddPercent = totalNumbers > 0 ? 100 - evenPercent : 0;
             
-            eoList.innerHTML = `
-                <li style="border: none; padding-bottom: 0;"><strong>Tổng số lượng:</strong> ${totalEven} Chẵn / ${totalOdd} Lẻ</li>
-                <li style="border: none;"><strong>Tỉ lệ:</strong> <span style="color: #0056b3; font-weight: bold;">${evenPercent}% Chẵn</span> - <span style="color: #d32f2f; font-weight: bold;">${oddPercent}% Lẻ</span></li>
-                <li style="border: none; margin-top: 10px; border-bottom: 1px dashed #ccc; padding-bottom: 5px;"><strong>Mô hình Chẵn/Lẻ theo kỳ:</strong></li>
+            let eoHTML = `
+                <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                    <span><strong>Tổng Chẵn:</strong> <span style="color: #0056b3;">${totalEven}</span></span>
+                    <span><strong>Tổng Lẻ:</strong> <span style="color: #d32f2f;">${totalOdd}</span></span>
+                </div>
+                <div class="progress-bar-wrap">
+                    <div class="progress-even" style="width: ${evenPercent > 0 ? evenPercent : 50}%">${evenPercent > 0 ? evenPercent + '%' : ''}</div>
+                    <div class="progress-odd" style="width: ${oddPercent > 0 ? oddPercent : 50}%">${oddPercent > 0 ? oddPercent + '%' : ''}</div>
+                </div>
+                <strong style="font-size: 14px; display: block; margin-bottom: 5px;">Xác suất mô hình (Cao -> Thấp):</strong>
+                <ul style="margin: 0 0 15px 0; font-size: 13.5px;">
             `;
+            
+            const totalDraws = Object.values(patternCount).reduce((a, b) => a + b, 0);
             const sortedPatterns = Object.entries(patternCount).sort((a, b) => b[1] - a[1]);
             sortedPatterns.forEach(([pattern, count]) => {
-                eoList.innerHTML += `<li>Kỳ quay <strong>${pattern}</strong>: xuất hiện ${count} lần</li>`;
+                const prob = totalDraws > 0 ? ((count / totalDraws) * 100).toFixed(1) : 0;
+                eoHTML += `<li><strong>${pattern}</strong>: ${count} lần <span style="color: #888;">(${prob}%)</span></li>`;
             });
+
+            eoHTML += `
+                </ul>
+                <strong style="font-size: 14px; display: block; margin-bottom: 5px;">Dây (Trend) 5 kỳ gần nhất:</strong>
+                <div>
+            `;
+
+            if (recentTrends.length === 0) {
+                eoHTML += `<span style="font-size: 13px; color: #888;">Chưa có dữ liệu</span>`;
+            } else {
+                recentTrends.forEach(t => {
+                    const tagClass = t.even > t.odd ? 'trend-even' : (t.even < t.odd ? 'trend-odd' : 'trend-neutral');
+                    eoHTML += `<span class="trend-tag ${tagClass}">${t.even}C - ${t.odd}L</span>`;
+                });
+            }
+
+            eoHTML += `</div>`;
+            eoList.innerHTML = eoHTML;
         }
 
         // 3. Hàm Gợi ý 6 số ngẫu nhiên cho kỳ tới
