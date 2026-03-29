@@ -27,6 +27,7 @@
 
     <h2>Phần Mềm Nhập Liệu & Thống Kê Xổ Số</h2>
     <p>Nhập các bộ số vào bảng dưới đây. Hệ thống sẽ thống kê số lần xuất hiện của từng con số.</p>
+    <p style="color: #555; font-style: italic;">💡 Mẹo: Bạn có thể copy một hoặc nhiều cột từ Excel và dán (Ctrl + V) trực tiếp vào bất kỳ ô nhập liệu nào.</p>
 
     <table id="lottery-table">
         <thead>
@@ -148,6 +149,44 @@
             renderList(freqs.mainNumbers, mainList);
             renderList(freqs.specialNumbers, specialList);
         }
+
+        // Xử lý sự kiện dán (paste) từ Excel
+        document.getElementById('lottery-table').addEventListener('paste', function(e) {
+            e.preventDefault(); // Ngăn hành vi dán mặc định
+            
+            // Lấy dữ liệu từ clipboard
+            const pasteData = (e.clipboardData || window.clipboardData).getData('text');
+            if (!pasteData) return;
+
+            // Phân tách dữ liệu thành mảng các hàng và cột
+            const rows = pasteData.split(/\r?\n/);
+            const targetInput = e.target;
+
+            if (targetInput.tagName !== 'INPUT') return;
+
+            const startTd = targetInput.closest('td');
+            const startTr = startTd.closest('tr');
+            const tbody = startTr.closest('tbody');
+            
+            const startColIdx = Array.from(startTr.children).indexOf(startTd);
+            const startRowIdx = Array.from(tbody.children).indexOf(startTr);
+
+            rows.forEach((row, i) => {
+                if (row.trim() === '') return; // Bỏ qua dòng trống
+                const cols = row.split('\t');
+
+                // Tự động thêm dòng nếu dán lố số dòng hiện tại
+                if (startRowIdx + i >= tbody.children.length) addRow();
+
+                const targetTr = tbody.children[startRowIdx + i];
+                cols.forEach((colData, j) => {
+                    const targetTd = targetTr.children[startColIdx + j];
+                    if (targetTd && targetTd.querySelector('input')) {
+                        targetTd.querySelector('input').value = colData.trim();
+                    }
+                });
+            });
+        });
     </script>
 </body>
 </html>
