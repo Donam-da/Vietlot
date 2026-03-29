@@ -56,6 +56,8 @@
 
     <button class="btn btn-secondary" onclick="addRow()">+ Thêm dòng</button>
     <button class="btn btn-primary" onclick="processData()">Tính toán thống kê</button>
+    <button class="btn btn-primary" style="background-color: #ff9800;" onclick="saveSession()">💾 Lưu phiên</button>
+    <button class="btn btn-secondary" style="background-color: #f44336;" onclick="clearSession()">🗑 Xóa dữ liệu</button>
 
     <div class="result-container" id="results" style="display: none;">
         <div class="result-box">
@@ -187,6 +189,57 @@
                 });
             });
         });
+
+        // Hàm lưu phiên làm việc vào LocalStorage
+        function saveSession() {
+            const rows = document.querySelectorAll('#table-body tr');
+            const data = [];
+            rows.forEach(row => {
+                const mainInputs = Array.from(row.querySelectorAll('.main-num')).map(input => input.value);
+                const specialInput = row.querySelector('.special-num') ? row.querySelector('.special-num').value : '';
+                data.push({ main: mainInputs, special: specialInput });
+            });
+            localStorage.setItem('lotterySession', JSON.stringify(data));
+            alert('Đã lưu phiên làm việc thành công!');
+        }
+
+        // Hàm tải lại phiên làm việc từ LocalStorage (tự động chạy lúc mở trang)
+        function loadSession() {
+            const savedData = localStorage.getItem('lotterySession');
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                const tbody = document.getElementById('table-body');
+                tbody.innerHTML = ''; // Xóa dòng trống mặc định
+                rowCount = 0; // Reset bộ đếm số dòng
+                
+                data.forEach(rowData => {
+                    addRow(); // Tái tạo số lượng dòng tương ứng
+                    const lastRow = tbody.lastElementChild;
+                    const mainInputs = lastRow.querySelectorAll('.main-num');
+                    const specialInput = lastRow.querySelector('.special-num');
+                    
+                    rowData.main.forEach((val, idx) => {
+                        if (mainInputs[idx]) mainInputs[idx].value = val;
+                    });
+                    if (specialInput) specialInput.value = rowData.special;
+                });
+            }
+        }
+
+        // Hàm xóa toàn bộ dữ liệu (cả bảng lẫn dữ liệu đã lưu)
+        function clearSession() {
+            if (confirm('Bạn có chắc chắn muốn xóa toàn bộ dữ liệu hiện tại?')) {
+                localStorage.removeItem('lotterySession');
+                const tbody = document.getElementById('table-body');
+                tbody.innerHTML = '';
+                rowCount = 0;
+                addRow(); // Tạo lại 1 dòng mặc định trống
+                document.getElementById('results').style.display = 'none';
+            }
+        }
+
+        // Đăng ký sự kiện: Tự động tải dữ liệu khi trang web vừa tải xong
+        window.addEventListener('DOMContentLoaded', loadSession);
     </script>
 </body>
 </html>
