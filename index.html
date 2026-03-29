@@ -11,7 +11,7 @@
         th.main-col { background-color: #e6f2ff; color: #0056b3; }
         th.special-col { background-color: #ffe6e6; color: #d32f2f; }
         input { width: 60px; text-align: center; padding: 6px; border: 1px solid #aaa; border-radius: 4px; }
-        input.draw-date { width: 95px; } /* Mở rộng ô nhập liệu cho ngày tháng */
+        input.draw-date { width: 170px; } /* Mở rộng ô nhập liệu để vừa định dạng dài của Excel */
         .btn { padding: 10px 15px; margin-right: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold;}
         .btn-primary { background-color: #4CAF50; color: white; }
         .btn-primary:hover { background-color: #45a049; }
@@ -211,7 +211,7 @@
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${rowCount}</td>
-                <td><input type="text" class="draw-date" placeholder="DD/MM/YYYY"></td>
+                <td><input type="text" class="draw-date" placeholder="21H - T2, 04/08/2025"></td>
                 <td><input type="number" class="main-num" min="0"></td>
                 <td><input type="number" class="main-num" min="0"></td>
                 <td><input type="number" class="main-num" min="0"></td>
@@ -314,9 +314,16 @@
 
                 const targetTr = tbody.children[startRowIdx + i];
                 cols.forEach((colData, j) => {
+                    let textValue = colData.trim();
+                    
+                    // Xử lý loại bỏ dấu ngoặc kép thừa do Excel tự thêm khi copy chuỗi có dấu phẩy
+                    if (textValue.startsWith('"') && textValue.endsWith('"')) {
+                        textValue = textValue.slice(1, -1).trim();
+                    }
+                    
                     const targetTd = targetTr.children[startColIdx + j];
                     if (targetTd && targetTd.querySelector('input')) {
-                        targetTd.querySelector('input').value = colData.trim();
+                        targetTd.querySelector('input').value = textValue;
                     }
                 });
             });
