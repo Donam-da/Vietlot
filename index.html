@@ -11,6 +11,7 @@
         th.main-col { background-color: #e6f2ff; color: #0056b3; }
         th.special-col { background-color: #ffe6e6; color: #d32f2f; }
         input { width: 60px; text-align: center; padding: 6px; border: 1px solid #aaa; border-radius: 4px; }
+        input.draw-date { width: 95px; } /* Mở rộng ô nhập liệu cho ngày tháng */
         .btn { padding: 10px 15px; margin-right: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold;}
         .btn-primary { background-color: #4CAF50; color: white; }
         .btn-primary:hover { background-color: #45a049; }
@@ -63,6 +64,7 @@
                 <thead>
                     <tr>
                         <th>Kỳ quay / STT</th>
+                        <th>Thời gian</th>
                         <th class="main-col">Số chính 1</th>
                         <th class="main-col">Số chính 2</th>
                         <th class="main-col">Số chính 3</th>
@@ -209,6 +211,7 @@
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${rowCount}</td>
+                <td><input type="text" class="draw-date" placeholder="DD/MM/YYYY"></td>
                 <td><input type="number" class="main-num" min="0"></td>
                 <td><input type="number" class="main-num" min="0"></td>
                 <td><input type="number" class="main-num" min="0"></td>
@@ -327,7 +330,8 @@
             rows.forEach(row => {
                 const mainInputs = Array.from(row.querySelectorAll('.main-num')).map(input => input.value);
                 const specialInput = row.querySelector('.special-num') ? row.querySelector('.special-num').value : '';
-                data.push({ main: mainInputs, special: specialInput });
+                const dateInput = row.querySelector('.draw-date') ? row.querySelector('.draw-date').value : '';
+                data.push({ date: dateInput, main: mainInputs, special: specialInput });
             });
             
             const sessions = getSessions();
@@ -356,11 +360,13 @@
                 const lastRow = tbody.lastElementChild;
                 const mainInputs = lastRow.querySelectorAll('.main-num');
                 const specialInput = lastRow.querySelector('.special-num');
+                const dateInput = lastRow.querySelector('.draw-date');
                 
                 rowData.main.forEach((val, idx) => {
                     if (mainInputs[idx]) mainInputs[idx].value = val;
                 });
                 if (specialInput) specialInput.value = rowData.special;
+                if (dateInput && rowData.date !== undefined) dateInput.value = rowData.date;
             });
         }
 
