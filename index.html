@@ -31,6 +31,9 @@
         .result-box h3 { margin-top: 0; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
         ul { list-style-type: none; padding-left: 0; }
         li { padding: 5px 0; border-bottom: 1px dashed #ccc; }
+        #custom-menu { display: none; position: absolute; background: #fff; border: 1px solid #ccc; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); z-index: 1000; border-radius: 4px; padding: 5px 0; min-width: 190px; font-size: 14px; }
+        #custom-menu div { padding: 10px 15px; cursor: pointer; }
+        #custom-menu div:hover { background-color: #f0f0f0; }
     </style>
 </head>
 <body>
@@ -114,6 +117,13 @@
                 <ul id="special-result-list"></ul>
             </div>
         </div>
+    </div>
+
+    <!-- MENU CHUỘT PHẢI TÙY CHỈNH -->
+    <div id="custom-menu">
+        <div id="menu-insert-row">⬆️ Thêm dòng lên trên</div>
+        <div id="menu-delete-row" style="color: #d32f2f;">❌ Xóa dòng này</div>
+        <div id="menu-clear-col">🗑️ Xóa dữ liệu cột này</div>
     </div>
 
     <script>
@@ -226,11 +236,10 @@
 
         // Hàm thêm dòng mới vào bảng
         function addRow() {
-            rowCount++;
             const tbody = document.getElementById('table-body');
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${rowCount}</td>
+                <td></td>
                 <td><input type="text" class="draw-date" placeholder="21H - T2, 04/08/2025"></td>
                 <td><input type="number" class="main-num" min="0"></td>
                 <td><input type="number" class="main-num" min="0"></td>
@@ -240,6 +249,7 @@
                 <td><input type="number" class="special-num" min="0"></td>
             `;
             tbody.appendChild(tr);
+            updateRowNumbers();
         }
 
         // Hàm trọng tâm: Tính toán số lần xuất hiện phân biệt số chính và số đặc biệt
@@ -349,31 +359,100 @@
             });
         });
 
-        // Xử lý sự kiện click chuột phải (contextmenu) để xóa dữ liệu 1 cột
+        let contextTargetCell = null;
+        let contextTargetRow = null;
+        let contextColIdx = -1;
+
+        // Xử lý sự kiện click chuột phải (contextmenu) hiện menu tùy chỉnh
         document.getElementById('lottery-container').addEventListener('contextmenu', function(e) {
-            // Lấy phần tử ô (th hoặc td) đang được click chuột phải
             const targetCell = e.target.closest('th') || e.target.closest('td');
             if (!targetCell) return;
 
-            e.preventDefault(); // Ngăn chặn menu chuột phải mặc định của trình duyệt
+            e.preventDefault();
             
-            // Xác định vị trí (index) của cột
-            const tr = targetCell.closest('tr');
-            const colIdx = Array.from(tr.children).indexOf(targetCell);
+            contextTargetCell = targetCell;
+            contextTargetRow = targetCell.closest('tr');
+            contextColIdx = Array.from(contextTargetRow.children).indexOf(targetCell);
 
-            // Bỏ qua cột đầu tiên (Cột STT không có dữ liệu nhập)
-            if (colIdx === 0) return;
+            const menu = document.getElementById('custom-menu');
+            menu.style.display = 'block';
+            menu.style.left = e.pageX + 'px';
+            menu.style.top = e.pageY + 'px';
+            
+            // Nếu click vào cột STT thì ẩn chức năng xóa cột
+            document.getElementById('menu-clear-col').style.display = (contextColIdx === 0) ? 'none' : 'block';
+            
+            // Nếu click vào thead (tiêu đề) thì ẩn chức năng liên quan đến dòng
+            const isThead = contextTargetCell.closest('thead') !== null;
+            document.getElementById('menu-insert-row').style.display = isThead ? 'none' : 'block';
+            document.getElementById('menu-delete-row').style.display = isThead ? 'none' : 'block';
+        });
 
+        // Ẩn menu khi click ra ngoài bảng
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('#custom-menu')) return; // Không ẩn nếu đang bấm các nút bên trong menu
+            document.getElementById('custom-menu').style.display = 'none';
+        });
+
+        // Thực thi chức năng: Thêm dòng lên trên
+        document.getElementById('menu-insert-row').addEventListener('click', function() {
+            if (!contextTargetRow) return;
+            const tbody = document.getElementById('table-body');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td></td>
+                <td><input type="text" class="draw-date" placeholder="21H - T2, 04/08/2025"></td>
+                <td><input type="number" class="main-num" min="0"></td>
+                <td><input type="number" class="main-num" min="0"></td>
+                <td><input type="number" class="main-num" min="0"></td>
+                <td><input type="number" class="main-num" min="0"></td>
+                <td><input type="number" class="main-num" min="0"></td>
+                <td><input type="number" class="special-num" min="0"></td>
+            `;
+            tbody.insertBefore(tr, contextTargetRow);
+            updateRowNumbers();
+            document.getElementById('custom-menu').style.display = 'none';
+        });
+
+        // Thực thi chức năng: Xóa dòng hiện tại
+        document.getElementById('menu-delete-row').addEventListener('click', function() {
+            if (!contextTargetRow) return;
+            const tbody = document.getElementById('table-body');
+            if (tbody.children.length <= 1) {
+                alert('Không thể xóa dòng duy nhất của bảng!');
+                document.getElementById('custom-menu').style.display = 'none';
+                return;
+            }
+            if (confirm('Bạn có chắc chắn muốn xóa dòng này?')) {
+                tbody.removeChild(contextTargetRow);
+                updateRowNumbers();
+            }
+            document.getElementById('custom-menu').style.display = 'none';
+        });
+
+        // Thực thi chức năng: Xóa dữ liệu cột
+        document.getElementById('menu-clear-col').addEventListener('click', function() {
+            if (contextColIdx === 0) return;
             if (confirm('Bạn có chắc chắn muốn xóa sạch dữ liệu của cột này không?')) {
                 const tbody = document.getElementById('table-body');
                 Array.from(tbody.children).forEach(row => {
-                    const targetTd = row.children[colIdx];
+                    const targetTd = row.children[contextColIdx];
                     if (targetTd && targetTd.querySelector('input')) {
-                        targetTd.querySelector('input').value = ''; // Xóa trắng ô nhập liệu
+                        targetTd.querySelector('input').value = ''; 
                     }
                 });
             }
+            document.getElementById('custom-menu').style.display = 'none';
         });
+
+        // Hàm tự động cập nhật lại STT của tất cả các dòng
+        function updateRowNumbers() {
+            const tbody = document.getElementById('table-body');
+            rowCount = tbody.children.length;
+            Array.from(tbody.children).forEach((row, index) => {
+                row.children[0].innerText = index + 1;
+            });
+        }
 
         // Hàm lưu dữ liệu hiện tại đè vào phiên làm việc đang mở
         function saveSession(showAlert = true) {
