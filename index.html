@@ -6,8 +6,17 @@
     <title>Phần Mềm Thống Kê Xổ Số</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
-        table { border-collapse: collapse; margin-bottom: 20px; width: 100%; max-width: 800px; }
-        th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+        .table-container { max-width: 800px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; overflow-x: auto; }
+        .header-wrapper { overflow-y: scroll; border-bottom: 2px solid #888; background-color: #f2f2f2; min-width: 760px; }
+        .header-wrapper::-webkit-scrollbar { visibility: hidden; } /* Ẩn thanh cuộn ở header để gióng cột */
+        .body-wrapper { max-height: 600px; overflow-y: scroll; background-color: #fff; min-width: 760px; }
+        .lottery-table { border-collapse: collapse; width: 100%; table-layout: fixed; margin: 0; }
+        .lottery-table th, .lottery-table td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+        .lottery-table th:first-child, .lottery-table td:first-child { border-left: none; }
+        .lottery-table th:last-child, .lottery-table td:last-child { border-right: none; }
+        .header-wrapper th { border-top: none; border-bottom: none; }
+        .body-wrapper tr:first-child td { border-top: none; }
+        .body-wrapper tr:last-child td { border-bottom: none; }
         th.main-col { background-color: #e6f2ff; color: #0056b3; }
         th.special-col { background-color: #ffe6e6; color: #d32f2f; }
         input { width: 60px; text-align: center; padding: 6px; border: 1px solid #aaa; border-radius: 4px; }
@@ -22,21 +31,6 @@
         .result-box h3 { margin-top: 0; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
         ul { list-style-type: none; padding-left: 0; }
         li { padding: 5px 0; border-bottom: 1px dashed #ccc; }
-        .table-wrapper {
-            max-height: 650px; /* Chiều cao tương đương khoảng tối đa 20 dòng */
-            overflow-y: auto;
-            max-width: 800px;
-            margin-bottom: 20px;
-        }
-        #lottery-table thead th {
-            position: sticky;
-            top: 0;
-            z-index: 2;
-            outline: 1px solid #ccc; /* Giữ viền cho tiêu đề khi cuộn */
-        }
-        #lottery-table thead th:first-child {
-            background-color: #f2f2f2; /* Màu nền cho cột STT để chữ cuộn ở dưới không bị đè lên */
-        }
     </style>
 </head>
 <body>
@@ -59,24 +53,50 @@
         <p>Nhập các bộ số vào bảng dưới đây. Hệ thống sẽ thống kê số lần xuất hiện của từng con số.</p>
         <p style="color: #555; font-style: italic;">💡 Mẹo: Bạn có thể copy một hoặc nhiều cột từ Excel và dán (Ctrl + V) trực tiếp vào bất kỳ ô nhập liệu nào.</p>
 
-        <div class="table-wrapper">
-            <table id="lottery-table" style="margin-bottom: 0;">
-                <thead>
-                    <tr>
-                        <th>Kỳ quay / STT</th>
-                        <th>Thời gian</th>
-                        <th class="main-col">Số chính 1</th>
-                        <th class="main-col">Số chính 2</th>
-                        <th class="main-col">Số chính 3</th>
-                        <th class="main-col">Số chính 4</th>
-                        <th class="main-col">Số chính 5</th>
-                        <th class="special-col">Số Đặc Biệt</th>
-                    </tr>
-                </thead>
-                <tbody id="table-body">
-                    <!-- Dữ liệu sẽ được tự động sinh ra khi load phiên -->
-                </tbody>
-            </table>
+        <div class="table-container" id="lottery-container">
+            <div class="header-wrapper">
+                <table class="lottery-table">
+                    <colgroup>
+                        <col style="width: 95px;">
+                        <col style="width: 195px;">
+                        <col style="width: auto;">
+                        <col style="width: auto;">
+                        <col style="width: auto;">
+                        <col style="width: auto;">
+                        <col style="width: auto;">
+                        <col style="width: auto;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Kỳ quay / STT</th>
+                            <th>Thời gian</th>
+                            <th class="main-col">Số chính 1</th>
+                            <th class="main-col">Số chính 2</th>
+                            <th class="main-col">Số chính 3</th>
+                            <th class="main-col">Số chính 4</th>
+                            <th class="main-col">Số chính 5</th>
+                            <th class="special-col">Số Đặc Biệt</th>
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+            <div class="body-wrapper">
+                <table class="lottery-table">
+                    <colgroup>
+                        <col style="width: 95px;">
+                        <col style="width: 195px;">
+                        <col style="width: auto;">
+                        <col style="width: auto;">
+                        <col style="width: auto;">
+                        <col style="width: auto;">
+                        <col style="width: auto;">
+                        <col style="width: auto;">
+                    </colgroup>
+                    <tbody id="table-body">
+                        <!-- Dữ liệu sẽ được tự động sinh ra khi load phiên -->
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <button class="btn btn-secondary" onclick="addRow()">+ Thêm dòng</button>
@@ -285,7 +305,7 @@
         }
 
         // Xử lý sự kiện dán (paste) từ Excel
-        document.getElementById('lottery-table').addEventListener('paste', function(e) {
+        document.getElementById('lottery-container').addEventListener('paste', function(e) {
             e.preventDefault(); // Ngăn hành vi dán mặc định
             
             // Lấy dữ liệu từ clipboard
@@ -330,7 +350,7 @@
         });
 
         // Xử lý sự kiện click chuột phải (contextmenu) để xóa dữ liệu 1 cột
-        document.getElementById('lottery-table').addEventListener('contextmenu', function(e) {
+        document.getElementById('lottery-container').addEventListener('contextmenu', function(e) {
             // Lấy phần tử ô (th hoặc td) đang được click chuột phải
             const targetCell = e.target.closest('th') || e.target.closest('td');
             if (!targetCell) return;
