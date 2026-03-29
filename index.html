@@ -182,13 +182,13 @@
                 <div class="result-box" style="display: flex; flex-direction: column; height: 400px; box-sizing: border-box;">
                     <h3 style="color: #fd7e14;">Bộ Số Gợi Ý Chuyên Sâu</h3>
                     <div style="margin-bottom: 15px;">
-                        <label for="suggestion-strategy" style="font-size: 14px; font-weight: bold; display: block; margin-bottom: 5px;">Chọn chiến lược:</label>
-                        <select id="suggestion-strategy" style="width: 100%; padding: 8px; font-size: 15px; border-radius: 4px;">
-                            <option value="balanced">Cân Bằng (Nóng, Lạnh)</option>
-                            <option value="hot">Dây Nóng (5 kỳ gần nhất)</option>
-                            <option value="cold">Săn Số Gan</option>
-                            <option value="random">Hoàn Toàn Ngẫu Nhiên</option>
-                        </select>
+                        <label style="font-size: 14px; font-weight: bold; display: block; margin-bottom: 5px;">Chọn chiến lược (có thể chọn nhiều):</label>
+                        <div style="text-align: left; font-size: 14px; background: #fff; border: 1px solid #ccc; border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 6px;">
+                            <label><input type="checkbox" class="strategy-cb" value="balanced" checked> Cân Bằng (Nóng, Lạnh, Tần suất)</label>
+                            <label><input type="checkbox" class="strategy-cb" value="hot"> Dây Nóng (5 kỳ gần nhất)</label>
+                            <label><input type="checkbox" class="strategy-cb" value="cold"> Săn Số Gan (Lâu chưa về)</label>
+                            <label><input type="checkbox" class="strategy-cb" value="random"> Hoàn Toàn Ngẫu Nhiên</label>
+                        </div>
                     </div>
                     <div id="suggested-numbers" style="flex-grow: 1; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; text-align: center;">
                         <span style="color: #999; font-size: 14px; font-weight: normal;">Chọn chiến lược và nhấn nút</span>
@@ -1043,7 +1043,14 @@
 
         // 3. Hàm Gợi ý 6 số chuyên sâu
         function suggestNumbers() {
-            const strategy = document.getElementById('suggestion-strategy').value;
+            const strategyCbs = document.querySelectorAll('.strategy-cb:checked');
+            const strategies = Array.from(strategyCbs).map(cb => cb.value);
+            
+            if (strategies.length === 0) {
+                CustomModal.alert('Vui lòng chọn ít nhất một chiến lược!');
+                return;
+            }
+
             const rows = document.querySelectorAll('#table-body tr');
             
             // Bước 1: Thu thập tất cả các số liệu thống kê cần thiết
@@ -1069,25 +1076,28 @@
 
             // Bước 2: Xây dựng một "bể" số có trọng số dựa trên chiến lược
             let mainPool = [];
-            if (strategy === 'random') {
-                mainPool = [...allMain];
-            } else {
-                const sortedFreqs = Object.entries(freqs.mainNumbers).sort((a, b) => b[1] - a[1]).map(item => item[0]);
-                const sortedGan = Object.entries(ganStats).sort((a, b) => b[1] - a[1]).map(item => item[0]);
+            const sortedFreqs = Object.entries(freqs.mainNumbers).sort((a, b) => b[1] - a[1]).map(item => item[0]);
+            const sortedGan = Object.entries(ganStats).sort((a, b) => b[1] - a[1]).map(item => item[0]);
 
-                if (strategy === 'balanced') {
-                    mainPool.push(...allMain); // Trọng số cơ bản là 1
-                    mainPool.push(...[...hotNumbers].slice(0, 10), ...[...hotNumbers].slice(0, 10)); // Thêm 2 trọng số cho số Nóng
-                    mainPool.push(...sortedGan.slice(0, 10), ...sortedGan.slice(0, 10)); // Thêm 2 trọng số cho số Gan
-                    mainPool.push(...sortedFreqs.slice(0, 10), ...sortedFreqs.slice(0, 10)); // Thêm 2 trọng số cho số Tần suất cao
-                } else if (strategy === 'hot') {
-                    mainPool.push(...allMain);
-                    [...hotNumbers].forEach(num => { for(let i=0; i<5; i++) mainPool.push(num); }); // Ưu tiên mạnh cho số Nóng
-                } else if (strategy === 'cold') {
-                    mainPool.push(...allMain);
-                    sortedGan.slice(0, 15).forEach(num => { for(let i=0; i<5; i++) mainPool.push(num); }); // Ưu tiên mạnh cho số Gan
-                }
+            if (strategies.includes('balanced')) {
+                mainPool.push(...allMain); // Trọng số cơ bản là 1
+                mainPool.push(...[...hotNumbers].slice(0, 10), ...[...hotNumbers].slice(0, 10)); // Thêm 2 trọng số cho số Nóng
+                mainPool.push(...sortedGan.slice(0, 10), ...sortedGan.slice(0, 10)); // Thêm 2 trọng số cho số Gan
+                mainPool.push(...sortedFreqs.slice(0, 10), ...sortedFreqs.slice(0, 10)); // Thêm 2 trọng số cho số Tần suất cao
+            } 
+            if (strategies.includes('hot')) {
+                mainPool.push(...allMain);
+                [...hotNumbers].forEach(num => { for(let i=0; i<5; i++) mainPool.push(num); }); // Ưu tiên mạnh cho số Nóng
+            } 
+            if (strategies.includes('cold')) {
+                mainPool.push(...allMain);
+                sortedGan.slice(0, 15).forEach(num => { for(let i=0; i<5; i++) mainPool.push(num); }); // Ưu tiên mạnh cho số Gan
             }
+            if (strategies.includes('random')) {
+                mainPool.push(...allMain);
+            }
+
+            if (mainPool.length === 0) mainPool = [...allMain];
             
             // Bước 3: Tạo và sàng lọc bộ số
             let suggestedMain;
@@ -1102,7 +1112,7 @@
                 const currentSuggestion = [...tempSet].slice(0, 5).map(n => parseInt(n));
                 
                 // Áp dụng bộ lọc thống kê (chỉ cho các chiến lược chuyên sâu)
-                if (strategy !== 'random') {
+                if (strategies.some(s => s !== 'random')) {
                     const sum = currentSuggestion.reduce((a, b) => a + b, 0);
                     const evens = currentSuggestion.filter(n => n % 2 === 0).length;
 
