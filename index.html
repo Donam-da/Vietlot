@@ -234,13 +234,54 @@
         //  CÁC HÀM XỬ LÝ TRONG BẢNG (APP SCREEN)
         // ==========================================
 
+        // Hàm tự động tính toán kỳ quay tiếp theo hoặc trước đó
+        // direction: 1 (tiến tới tương lai - dùng khi thêm lên trên), -1 (lùi về quá khứ - dùng khi thêm xuống dưới)
+        function calculateDrawTime(baseString, direction) {
+            if (!baseString || typeof baseString !== 'string') return "";
+            
+            // Tìm kiếm chuỗi khớp định dạng: 21H - T7, 28/03/2026
+            const regex = /^(\d{1,2})H\s*-\s*.+?,\s*(\d{2})\/(\d{2})\/(\d{4})$/i;
+            const match = baseString.trim().match(regex);
+            if (!match) return "";
+
+            let hour = parseInt(match[1], 10);
+            let day = parseInt(match[2], 10);
+            let month = parseInt(match[3], 10) - 1; // JS đếm tháng từ 0-11
+            let year = parseInt(match[4], 10);
+
+            let dateObj = new Date(year, month, day);
+
+            if (direction === 1) { // Tiến lên 1 đợt quay
+                if (hour === 13) { hour = 21; } 
+                else if (hour === 21) { hour = 13; dateObj.setDate(dateObj.getDate() + 1); }
+            } else if (direction === -1) { // Lùi lại 1 đợt quay
+                if (hour === 21) { hour = 13; } 
+                else if (hour === 13) { hour = 21; dateObj.setDate(dateObj.getDate() - 1); }
+            }
+
+            const newDay = String(dateObj.getDate()).padStart(2, '0');
+            const newMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const newYear = dateObj.getFullYear();
+            const dayOfWeekMap = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+            const dow = dayOfWeekMap[dateObj.getDay()];
+
+            return `${hour}H - ${dow}, ${newDay}/${newMonth}/${newYear}`;
+        }
+
         // Hàm thêm dòng mới vào bảng
         function addRow() {
             const tbody = document.getElementById('table-body');
+            
+            let newTimeStr = "";
+            if (tbody.children.length > 0) {
+                const lastDateInput = tbody.lastElementChild.querySelector('.draw-date').value;
+                newTimeStr = calculateDrawTime(lastDateInput, -1); // Lùi 1 kỳ quay so với dòng cuối
+            }
+            
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td></td>
-                <td><input type="text" class="draw-date" placeholder="21H - T2, 04/08/2025"></td>
+                <td><input type="text" class="draw-date" placeholder="21H - T2, 04/08/2025" value="${newTimeStr}"></td>
                 <td><input type="number" class="main-num" min="0"></td>
                 <td><input type="number" class="main-num" min="0"></td>
                 <td><input type="number" class="main-num" min="0"></td>
@@ -398,10 +439,14 @@
         document.getElementById('menu-insert-row').addEventListener('click', function() {
             if (!contextTargetRow) return;
             const tbody = document.getElementById('table-body');
+            
+            const baseDateInput = contextTargetRow.querySelector('.draw-date').value;
+            const newTimeStr = calculateDrawTime(baseDateInput, 1); // Tiến 1 kỳ quay so với dòng đang chọn
+            
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td></td>
-                <td><input type="text" class="draw-date" placeholder="21H - T2, 04/08/2025"></td>
+                <td><input type="text" class="draw-date" placeholder="21H - T2, 04/08/2025" value="${newTimeStr}"></td>
                 <td><input type="number" class="main-num" min="0"></td>
                 <td><input type="number" class="main-num" min="0"></td>
                 <td><input type="number" class="main-num" min="0"></td>
