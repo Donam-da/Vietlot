@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Phần Mềm Thống Kê Xổ Số</title>
+    <!-- Thư viện SheetJS hỗ trợ đọc trực tiếp tệp Excel trên trình duyệt -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
         .table-container { max-width: 980px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; overflow-x: auto; }
@@ -125,6 +127,8 @@
         <button class="btn btn-primary" onclick="processData()">Tính toán thống kê</button>
         <button class="btn btn-primary" style="background-color: #ff9800;" onclick="saveSession()">💾 Lưu phiên</button>
         <button class="btn btn-primary" style="background-color: #17a2b8;" onclick="exportToExcel()">📥 Xuất Excel</button>
+        <button class="btn btn-secondary" style="background-color: #28a745;" onclick="triggerExcelUpload()">📤 Nhập Excel</button>
+        <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" style="display: none;">
         <button class="btn btn-secondary" style="background-color: #f44336;" onclick="clearTable()">🗑 Xóa trắng bảng</button>
 
         <div class="result-container" id="results" style="display: none;">
@@ -727,6 +731,73 @@
             link.click();
             document.body.removeChild(link);
         }
+
+        // Kích hoạt input file ẩn khi bấm nút Nhập Excel
+        function triggerExcelUpload() {
+            document.getElementById('excel-upload').click();
+        }
+
+        // Xử lý đọc file Excel và điền vào bảng
+        document.getElementById('excel-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const data = new Uint8Array(evt.target.result);
+                try {
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    // raw: false giúp đọc định dạng ngày tháng và số dưới dạng Text như hiển thị trên Excel
+                    const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1, raw: false});
+
+                    if (rows.length === 0) {
+                        CustomModal.alert('File không có dữ liệu!');
+                        return;
+                    }
+
+                    // Bỏ qua dòng tiêu đề nếu phát hiện từ khóa
+                    let startIndex = 0;
+                    if (rows[0] && rows[0].join('').toLowerCase().includes('số chính')) {
+                        startIndex = 1;
+                    }
+
+                    const tbody = document.getElementById('table-body');
+                    // Nếu bảng đang trống, tự động xóa dòng mặc định để nạp số liệu mới vào cho gọn
+                    if (tbody.children.length === 1) {
+                        const inputs = tbody.querySelectorAll('input');
+                        const isEmpty = Array.from(inputs).every(input => input.value.trim() === '');
+                        if (isEmpty) { tbody.innerHTML = ''; rowCount = 0; }
+                    }
+
+                    rows.slice(startIndex).forEach(rowData => {
+                        if (!rowData || rowData.length === 0 || rowData.join('').trim() === '') return; // Bỏ qua dòng trống
+                        
+                        addRow();
+                        const lastRow = tbody.lastElementChild;
+                        
+                        // Xác định vị trí cột: Hỗ trợ cả file chuẩn (8 cột) hoặc file chỉ chứa đúng 6 cột số
+                        let dateIdx = rowData.length > 6 ? 1 : -1;
+                        let mainStartIdx = rowData.length > 6 ? 2 : 0;
+                        let specialIdx = rowData.length > 6 ? 7 : 5;
+
+                        if (dateIdx !== -1 && lastRow.querySelector('.draw-date') && rowData[dateIdx] !== undefined) lastRow.querySelector('.draw-date').value = rowData[dateIdx];
+                        const mainInputs = lastRow.querySelectorAll('.main-num');
+                        for (let j = 0; j < 5; j++) { if (mainInputs[j] && rowData[mainStartIdx + j] !== undefined) mainInputs[j].value = rowData[mainStartIdx + j]; }
+                        if (lastRow.querySelector('.special-num') && rowData[specialIdx] !== undefined) lastRow.querySelector('.special-num').value = rowData[specialIdx];
+                    });
+
+                    CustomModal.alert('Đã nhập dữ liệu từ Excel thành công!');
+                } catch (err) {
+                    console.error(err);
+                    CustomModal.alert('Có lỗi xảy ra khi đọc file Excel. Vui lòng kiểm tra lại định dạng!');
+                } finally {
+                    e.target.value = ''; // Reset lại input để có thể chọn lại file đó
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
 
         // Đăng ký sự kiện: Bắt buộc mở màn hình Home khi web vừa tải
         window.addEventListener('DOMContentLoaded', showHomeScreen);
