@@ -435,12 +435,12 @@
             tr.innerHTML = `
                 <td></td>
                 <td><input type="text" class="draw-date" placeholder="21H - T2, 04/08/2025" value="${newTimeStr}"></td>
-                <td><input type="number" class="main-num" min="0"></td>
-                <td><input type="number" class="main-num" min="0"></td>
-                <td><input type="number" class="main-num" min="0"></td>
-                <td><input type="number" class="main-num" min="0"></td>
-                <td><input type="number" class="main-num" min="0"></td>
-                <td><input type="number" class="special-num" min="0"></td>
+                <td><input type="number" class="main-num" min="1" max="35"></td>
+                <td><input type="number" class="main-num" min="1" max="35"></td>
+                <td><input type="number" class="main-num" min="1" max="35"></td>
+                <td><input type="number" class="main-num" min="1" max="35"></td>
+                <td><input type="number" class="main-num" min="1" max="35"></td>
+                <td><input type="number" class="special-num" min="1" max="12"></td>
             `;
             tbody.appendChild(tr);
             updateRowNumbers();
@@ -609,12 +609,12 @@
             tr.innerHTML = `
                 <td></td>
                 <td><input type="text" class="draw-date" placeholder="21H - T2, 04/08/2025" value="${newTimeStr}"></td>
-                <td><input type="number" class="main-num" min="0"></td>
-                <td><input type="number" class="main-num" min="0"></td>
-                <td><input type="number" class="main-num" min="0"></td>
-                <td><input type="number" class="main-num" min="0"></td>
-                <td><input type="number" class="main-num" min="0"></td>
-                <td><input type="number" class="special-num" min="0"></td>
+                <td><input type="number" class="main-num" min="1" max="35"></td>
+                <td><input type="number" class="main-num" min="1" max="35"></td>
+                <td><input type="number" class="main-num" min="1" max="35"></td>
+                <td><input type="number" class="main-num" min="1" max="35"></td>
+                <td><input type="number" class="main-num" min="1" max="35"></td>
+                <td><input type="number" class="special-num" min="1" max="12"></td>
             `;
             tbody.insertBefore(tr, contextTargetRow);
             updateRowNumbers();
@@ -922,25 +922,28 @@
         function getGanStats() {
             const rows = document.querySelectorAll('#table-body tr');
             const ganStats = {};
-            let allMainNumbers = new Set();
+            
+            // Khởi tạo tất cả các số có thể có từ 1-35
+            for (let i = 1; i <= 35; i++) {
+                ganStats[i] = rows.length; // Giả định ban đầu là chưa về trong tất cả các kỳ
+            }
 
-            rows.forEach((row) => {
-                row.querySelectorAll('.main-num').forEach(input => {
-                    const val = input.value.trim();
-                    if(val !== "") allMainNumbers.add(parseInt(val, 10));
-                });
-            });
+            // Nếu bảng trống, trả về tất cả số với gan là 0
+            if (rows.length === 0 || (rows.length === 1 && Array.from(rows[0].querySelectorAll('input')).every(i => i.value.trim() === ''))) {
+                 for (let i = 1; i <= 35; i++) { ganStats[i] = 0; }
+                 return ganStats;
+            }
 
-            if (allMainNumbers.size === 0) return {};
-
-            allMainNumbers.forEach(num => { ganStats[num] = rows.length; });
-
+            // Cập nhật kỳ về gần nhất cho mỗi số
             rows.forEach((row, index) => {
                 row.querySelectorAll('.main-num').forEach(input => {
                     const value = input.value.trim();
                     if (value !== "") {
                         const num = parseInt(value, 10);
-                        if (ganStats[num] === rows.length) ganStats[num] = index;
+                        // Chỉ cập nhật nếu đây là lần xuất hiện đầu tiên khi duyệt từ trên xuống
+                        if (ganStats[num] === rows.length) {
+                            ganStats[num] = index;
+                        }
                     }
                 });
             });
@@ -1076,8 +1079,8 @@
             let allSpecial = Object.keys(freqs.specialNumbers);
 
             // Dự phòng nếu dữ liệu quá ít
-            if (allMain.length < 15) { for(let i=1; i<=45; i++) allMain.push(i.toString()); }
-            if (allSpecial.length < 5) { for(let i=1; i<=45; i++) allSpecial.push(i.toString()); }
+            if (allMain.length < 15) { for(let i=1; i<=35; i++) allMain.push(i.toString()); }
+            if (allSpecial.length < 5) { for(let i=1; i<=12; i++) allSpecial.push(i.toString()); }
 
             // Bước 2: Xây dựng một "bể" số có trọng số dựa trên chiến lược
             let mainPool = [];
@@ -1121,8 +1124,8 @@
                     const sum = currentSuggestion.reduce((a, b) => a + b, 0);
                     const evens = currentSuggestion.filter(n => n % 2 === 0).length;
 
-                    // 1. Lọc theo Tổng: Tổng các số thường nằm trong khoảng 80-160
-                    if (sum < 80 || sum > 160) {
+                    // 1. Lọc theo Tổng: Tổng các số thường nằm trong khoảng 65-115
+                    if (sum < 65 || sum > 115) {
                         attempts++;
                         continue;
                     }
@@ -1132,9 +1135,9 @@
                         continue;
                     }
                     
-                    // 3. Lọc Phân bổ Đầu số: Tránh trường hợp 4-5 số dồn vào cùng 1 đầu (vd: 11,12,15,18,19)
-                    const decades = [0, 0, 0, 0, 0];
-                    currentSuggestion.forEach(n => { decades[Math.floor(n / 10)]++; });
+                    // 3. Lọc Phân bổ Đầu số: Tránh trường hợp 4-5 số dồn vào cùng 1 đầu (vd: 11,12,15,18)
+                    const decades = [0, 0, 0, 0]; // 4 nhóm: 1-9, 10-19, 20-29, 30-35
+                    currentSuggestion.forEach(n => { if (n > 0) decades[Math.floor(n / 10)]++; });
                     if (Math.max(...decades) > 3) {
                         attempts++;
                         continue;
@@ -1311,7 +1314,7 @@
                 }
 
                 if (currentPicked.length < 5) {
-                    const allPossibleNumbers = Array.from({length: 45}, (_, i) => i + 1);
+                    const allPossibleNumbers = Array.from({length: 35}, (_, i) => i + 1);
                     shuffle(allPossibleNumbers);
                     for (const num of allPossibleNumbers) {
                         if (!pickedSet.has(num)) { pickedSet.add(num); currentPicked.push(num); }
@@ -1337,7 +1340,7 @@
                 }
 
                 pickedMain = currentPicked; // Gán trước đề phòng hết attempts
-                if (sum >= 70 && sum <= 170 && evens >= 1 && evens <= 4 && maxConsecutive < 4 && !isDuplicatePast) {
+                if (sum >= 60 && sum <= 125 && evens >= 1 && evens <= 4 && maxConsecutive < 4 && !isDuplicatePast) {
                     break; // Đạt chuẩn thì thoát vòng lặp
                 }
                 attempts++;
